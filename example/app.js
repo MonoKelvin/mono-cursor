@@ -79,7 +79,7 @@
       zoneArrowProse: '把指针放在这段文字上，什么都不会发生。正文、空 div、没有交互的地方都是箭头 —— 光标只对真正有行为的东西作出反应。',
       zoneRing: '圆环',
       zoneRingHint: '链接、按钮、控件',
-      zoneText: 'I 形光标',
+      zoneText: '光标',
       zoneTextHint: '输入框与可编辑文本',
       demoLink: '阅读文档 →',
       demoButton: '开始使用',
@@ -202,8 +202,8 @@
     window.MonoCursor.init({
       color: '#6366f1',
       arrowSize: 26,
-      ringSize: 22,
-      ringBorderWidth: 1.5,
+      ringSize: 24,
+      ringBorderWidth: 1.8,
       shadow: true,
       clickEffect: true,
     });

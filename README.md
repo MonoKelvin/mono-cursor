@@ -27,7 +27,7 @@ npm i mono-cursor
 import { MonoCursor } from 'mono-cursor'
 
 // once, at startup
-MonoCursor.init({ color: '#6366f1', ringSize: 22 })
+MonoCursor.init({ color: '#6366f1', ringSize: 24 })
 
 // from anywhere — no ref needed
 MonoCursor.setColor('#f59e0b')
@@ -52,7 +52,7 @@ Call `MonoCursor.init()` once at startup, then use the static setters from anywh
 
 ```js
 // init
-MonoCursor.init({ color: '#6366f1', ringSize: 22, shadow: true })
+MonoCursor.init({ color: '#6366f1', ringSize: 24, shadow: true })
 
 // runtime updates — anywhere in the app, no import needed
 MonoCursor.setColor('#f59e0b')
@@ -91,8 +91,8 @@ Creates and registers the global singleton. Safe to call multiple times — late
 |--------|------|---------|-------------|
 | `color` | `string` | `#6366f1` | Arrow, ring and I-beam colour |
 | `arrowSize` | `number` | `26` | Arrow width and height in pixels |
-| `ringSize` | `number` | `22` | Ring diameter in pixels |
-| `ringBorderWidth` | `number` | `1.5` | Ring stroke thickness in pixels |
+| `ringSize` | `number` | `24` | Ring diameter in pixels |
+| `ringBorderWidth` | `number` | `1.8` | Ring stroke thickness in pixels |
 | `hideDefaultCursor` | `boolean` | `true` | Hide the native pointer while the cursor is active |
 | `enableCircle` | `boolean` | `true` | Draw the ring / I-beam |
 | `shadow` | `boolean` | `true` | Drop shadow under the arrow and ring |
@@ -129,7 +129,7 @@ Force a state on any element without writing JS:
 
 ```html
 <a data-cursor="pointer">Link</a>
-<div data-cursor="circle">A larger ring target</div>
+<div data-cursor="circle">Ring target</div>
 <div data-cursor="text">Force the I-beam</div>
 <div data-cursor="interactive">Anything clickable</div>
 ```
@@ -145,8 +145,8 @@ Override at runtime or in your stylesheet:
   --mc-color:         #6366f1;
   --mc-stroke:        #ffffff;   /* arrow outline */
   --mc-arrow-size:    26px;
-  --mc-ring-size:     22px;
-  --mc-ring-border:   1.5px;
+  --mc-ring-size:     24px;
+  --mc-ring-border:   1.8px;
   --mc-z-index:       999999;
 }
 ```
@@ -188,7 +188,7 @@ import { MonoCursorProvider } from 'mono-cursor/react'
 
 export function App() {
   return (
-    <MonoCursorProvider color="#6366f1" ringSize={22}>
+    <MonoCursorProvider color="#6366f1" ringSize={24}>
       <YourApp />
     </MonoCursorProvider>
   )

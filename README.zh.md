@@ -27,7 +27,7 @@ npm i mono-cursor
 import { MonoCursor } from 'mono-cursor'
 
 // 启动时初始化一次
-MonoCursor.init({ color: '#6366f1', ringSize: 22 })
+MonoCursor.init({ color: '#6366f1', ringSize: 24 })
 
 // 随时更新 — 无需获取实例引用
 MonoCursor.setColor('#f59e0b')
@@ -52,7 +52,7 @@ MonoCursor.setArrowSize(30)
 
 ```js
 // 初始化
-MonoCursor.init({ color: '#6366f1', ringSize: 22, shadow: true })
+MonoCursor.init({ color: '#6366f1', ringSize: 24, shadow: true })
 
 // 运行时更新 — 应用的任何地方都能调用，无需 import
 MonoCursor.setColor('#f59e0b')
@@ -91,8 +91,8 @@ MonoCursor.destroy()
 |------|------|--------|------|
 | `color` | `string` | `#6366f1` | 箭头、圆环、I 形光标的颜色 |
 | `arrowSize` | `number` | `26` | 箭头宽高（像素） |
-| `ringSize` | `number` | `22` | 圆环直径（像素） |
-| `ringBorderWidth` | `number` | `1.5` | 圆环描边粗细（像素） |
+| `ringSize` | `number` | `24` | 圆环直径（像素） |
+| `ringBorderWidth` | `number` | `1.8` | 圆环描边粗细（像素） |
 | `hideDefaultCursor` | `boolean` | `true` | 激活时隐藏系统光标 |
 | `enableCircle` | `boolean` | `true` | 绘制圆环 / I 形光标 |
 | `shadow` | `boolean` | `true` | 箭头与圆环的投影 |
@@ -129,7 +129,7 @@ const cursor = createCursor({ color: '#6366f1' })
 
 ```html
 <a data-cursor="pointer">链接</a>
-<div data-cursor="circle">一个更大的圆环目标</div>
+<div data-cursor="circle">圆环目标</div>
 <div data-cursor="text">强制 I 形光标</div>
 <div data-cursor="interactive">任何可点击元素</div>
 ```
@@ -145,8 +145,8 @@ const cursor = createCursor({ color: '#6366f1' })
   --mc-color:         #6366f1;
   --mc-stroke:        #ffffff;   /* 箭头轮廓 */
   --mc-arrow-size:    26px;
-  --mc-ring-size:     22px;
-  --mc-ring-border:   1.5px;
+  --mc-ring-size:     24px;
+  --mc-ring-border:   1.8px;
   --mc-z-index:       999999;
 }
 ```
@@ -188,7 +188,7 @@ import { MonoCursorProvider } from 'mono-cursor/react'
 
 export function App() {
   return (
-    <MonoCursorProvider color="#6366f1" ringSize={22}>
+    <MonoCursorProvider color="#6366f1" ringSize={24}>
       <YourApp />
     </MonoCursorProvider>
   )

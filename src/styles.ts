@@ -14,8 +14,8 @@ const styles = `
   --mc-color: #6366f1;
   --mc-stroke: #fff;
   --mc-arrow-size: 26px;
-  --mc-ring-size: 22px;
-  --mc-ring-border: 1.5px;
+  --mc-ring-size: 24px;
+  --mc-ring-border: 1.8px;
   --mc-z-index: 999999;
   --mc-ease: cubic-bezier(0.33, 1, 0.68, 1);
   --mc-tip-x: calc(var(--mc-arrow-size) * ${TIP_X});

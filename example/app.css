@@ -1,3 +1,13 @@
+/* Tabler's filled glyphs live in a separate font from the outline webfont
+   loaded in <head>; pull just that file so the hero's solid heart can render. */
+@font-face {
+  font-family: "tabler-icons-filled";
+  font-style: normal;
+  font-weight: 400;
+  font-display: block;
+  src: url("https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/fonts/tabler-icons-filled.woff2") format("woff2");
+}
+
 /* ── Tokens ─────────────────────────────────────────────────────────────
      The accent IS the cursor colour: the library writes --mc-color on :root
      and everything that highlights here reads it back. */
@@ -89,10 +99,10 @@
     letter-spacing: -0.01em;
   }
 
-  .brand svg { display: block; width: 17px; height: 17px; }
+  .brand svg { display: block; width: 20px; height: 20px; }
   .brand path { fill: var(--accent); stroke: var(--bg); stroke-width: 1.4; stroke-linejoin: round; paint-order: stroke; }
 
-  .brand-sep { color: var(--faint); font-style: italic; margin: 0 -2px; }
+  .brand-sep { color: var(--faint); margin: 0 -2px; }
 
   /* Author credit — the underline slides in from the left on hover. */
   .author-link {
@@ -117,28 +127,21 @@
   .author-link:hover { color: var(--text); }
   .author-link:hover::after { transform: scaleX(1); }
 
-  .tools { display: flex; align-items: center; gap: 8px; }
+  .tools { display: flex; align-items: center; gap: 9px; }
   /* One height for every control in the corner — language, links, theme. */
-  .tools > * { height: 32px; }
+  .tools > * { height: 38px; }
 
-  .seg {
-    display: flex;
-    gap: 2px;
-    padding: 2px;
-    border: 1px solid var(--line);
-    border-radius: 9px;
-    background: var(--chip);
-  }
+  .seg { display: flex; gap: 2px; padding: 3px; border: 1px solid var(--line); border-radius: 10px; background: var(--chip); }
 
   .seg-btn {
     display: inline-flex;
     align-items: center;
-    padding: 0 11px;
+    padding: 0 13px;
     border: 0;
-    border-radius: 7px;
+    border-radius: 8px;
     background: none;
     color: var(--faint);
-    font: 11.5px var(--mono);
+    font: 12.5px var(--mono);
     cursor: pointer;
     transition: color 0.15s ease, background 0.15s ease;
   }
@@ -148,9 +151,9 @@
   .icon-btn {
     display: grid;
     place-items: center;
-    width: 32px;
+    width: 38px;
     border: 1px solid var(--line);
-    border-radius: 9px;
+    border-radius: 10px;
     background: var(--chip);
     color: var(--muted);
     text-decoration: none;
@@ -158,11 +161,7 @@
     transition: color 0.15s ease, border-color 0.15s ease;
   }
   .icon-btn:hover { color: var(--text); border-color: var(--line-strong); }
-  .icon-btn svg { width: 15px; height: 15px; }
-  .icon-btn .icon-sun,
-  .icon-btn .icon-moon { fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; }
-  .icon-btn .icon-github,
-  .icon-btn .icon-npm { fill: currentColor; }
+  .icon-btn .ti { font-size: 20px; line-height: 1; }
   /* The button shows the theme you would switch to. */
   :root[data-theme="dark"] .icon-moon,
   :root[data-theme="light"] .icon-sun { display: none; }
@@ -170,7 +169,7 @@
   /* ── Hero ──────────────────────────────────────────────────────────────── */
   .hero {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 320px;
+    grid-template-columns: minmax(0, 1fr) 360px;
     align-items: center;
     gap: 48px;
   }
@@ -230,12 +229,12 @@
     width: 100%;
     max-width: 360px;
     margin-left: auto;
-    --t: 11s;
+    --t: 8s;
     --ease: cubic-bezier(0.4, 0, 0.2, 1);
     --art: 62px;        /* arrow  */
-    --ring: 54px;       /* ring   */
+    --ring: 44px;       /* ring   */
     --bar-w: 3px;       /* I-beam */
-    --bar-h: 44px;
+    --bar-h: 30px;
   }
 
   /* Soft accent bloom, pulled slightly upward. */
@@ -309,9 +308,13 @@
     background: var(--chip);
     animation: art-heart-press var(--t) var(--ease) infinite;
   }
-  .heart { grid-area: 1 / 1; width: 26px; height: 26px; }
-  .heart-hollow { fill: none; stroke: var(--muted); stroke-width: 1.8; animation: art-heart-hollow var(--t) var(--ease) infinite; }
-  .heart-solid { fill: #ff4d5e; opacity: 0; animation: art-heart-solid var(--t) var(--ease) infinite; }
+  .heart { grid-area: 1 / 1; font-size: 28px; line-height: 1; font-style: normal; }
+  .heart-hollow { color: var(--muted); animation: art-heart-hollow var(--t) var(--ease) infinite; }
+  .heart-solid { color: #ff4d5e; opacity: 0; animation: art-heart-solid var(--t) var(--ease) infinite; }
+  /* The free Tabler webfont ships outline glyphs only, so the solid heart is
+     drawn from Tabler's separate filled font (official glyph U+F67C).
+     font-style:normal keeps the <i> element from faux-italicising the glyph. */
+  .heart-solid::before { content: "\f67c"; font-family: "tabler-icons-filled" !important; font-style: normal; }
 
   /* The moving origin — rides across the field and over to the heart. Its
      coordinates are relative to the row's top-left. */
@@ -380,70 +383,77 @@
     99%, 100% { opacity: 0 }
   }
 
-  /* Enter lower-right → field text start → trail the typed glyph → heart. */
+  /* Enter lower-right → field text start → trail the typed glyph → heart →
+     drift back down and off. The typing segment is linear so the I-beam stays
+     glued to the growing text edge (an eased segment would race ahead). */
   @keyframes art-path {
     0%, 4%    { opacity: 0; translate: 322px 108px }
     10%       { opacity: 1 }
-    16%, 20%  { opacity: 1; translate: 22px 29px }
-    52%       { opacity: 1; translate: 154px 29px }
-    60%, 92%  { opacity: 1; translate: 271px 29px }
-    97%, 100% { opacity: 0; translate: 271px 29px }
+    14%, 18%  { opacity: 1; translate: 22px 29px; animation-timing-function: linear }
+    38%       { translate: 148px 29px }
+    48%, 78%  { opacity: 1; translate: 271px 29px }
+    90%       { opacity: 1; translate: 271px 98px }
+    96%, 100% { opacity: 0; translate: 271px 98px }
   }
 
-  /* Arrow: only while gliding in, then dissolves into the I-beam. */
+  /* Arrow: glides in at the start, and returns at the end as the cursor
+     leaves the heart and drifts down before fading out. */
   @keyframes art-arrow {
-    0%, 14%   { opacity: 1; scale: 1 }
-    19%, 100% { opacity: 0; scale: 0.92 }
+    0%, 12%   { opacity: 1; scale: 1 }
+    16%, 78%  { opacity: 0; scale: 0.92 }
+    84%, 90%  { opacity: 1; scale: 1 }
+    96%, 100% { opacity: 0; scale: 1 }
   }
 
   /* I-beam: from the field entry through typing, until it reaches the heart. */
   @keyframes art-bar {
-    0%, 15%   { opacity: 0 }
-    19%       { opacity: 1 }
-    54%       { opacity: 1 }
-    59%, 100% { opacity: 0 }
+    0%, 13%   { opacity: 0 }
+    16%       { opacity: 1 }
+    40%       { opacity: 1 }
+    45%, 100% { opacity: 0 }
   }
 
-  /* Ring: blooms at the heart, takes the click shake, then fades at the seam. */
+  /* Ring: blooms at the heart, takes the click shake, holds over the filled
+     heart, then morphs back to the arrow as the cursor leaves. */
   @keyframes art-ring {
-    0%, 55%   { opacity: 0; scale: 0.55 }
-    60%       { opacity: 1; scale: 1 }
-    63%       { scale: 0.82 }
-    66%       { scale: 1.06 }
-    69%       { scale: 1 }
-    92%       { opacity: 1; scale: 1 }
-    97%, 100% { opacity: 0; scale: 0.7 }
+    0%, 43%   { opacity: 0; scale: 0.55 }
+    48%       { opacity: 1; scale: 1 }
+    55%       { scale: 0.82 }
+    58%       { scale: 1.06 }
+    61%       { scale: 1 }
+    78%       { opacity: 1; scale: 1 }
+    84%, 100% { opacity: 0; scale: 0.82 }
   }
 
   /* Field: accent border while the I-beam is inside it. */
   @keyframes art-field {
-    0%, 14%   { border-color: var(--line-strong) }
-    20%, 52%  { border-color: var(--accent) }
-    58%, 100% { border-color: var(--line-strong) }
+    0%, 13%   { border-color: var(--line-strong) }
+    18%, 38%  { border-color: var(--accent) }
+    44%, 100% { border-color: var(--line-strong) }
   }
 
   /* "mono-cursor" reveals glyph-by-glyph in step with the trailing I-beam. */
   @keyframes art-type {
-    0%, 20%  { clip-path: inset(0 100% 0 0) }
-    52%      { clip-path: inset(0 0 0 0) }
+    0%, 18%  { clip-path: inset(0 100% 0 0) }
+    38%      { clip-path: inset(0 0 0 0) }
     100%     { clip-path: inset(0 0 0 0) }
   }
 
   /* Heart: hollow until the click, then the solid red one pops in. */
   @keyframes art-heart-press {
-    0%, 61%   { scale: 1 }
-    64%       { scale: 0.9 }
-    69%, 100% { scale: 1 }
+    0%, 52%   { scale: 1 }
+    56%       { scale: 0.9 }
+    61%, 100% { scale: 1 }
   }
   @keyframes art-heart-hollow {
-    0%, 67%   { opacity: 1 }
-    72%, 95%  { opacity: 0 }
+    0%, 60%   { opacity: 1 }
+    65%, 94%  { opacity: 0 }
     99%, 100% { opacity: 1 }
   }
   @keyframes art-heart-solid {
-    0%, 67%   { opacity: 0; scale: 0.5 }
-    73%       { opacity: 1; scale: 1.22 }
-    78%, 95%  { opacity: 1; scale: 1 }
+    0%, 60%   { opacity: 0; scale: 0.5 }
+    66%       { opacity: 1; scale: 1.22 }
+    71%, 94%  { opacity: 1; scale: 1 }
     99%, 100% { opacity: 0; scale: 0.5 }
   }
 
@@ -464,62 +474,74 @@
   .zone {
     display: flex;
     flex-direction: column;
-    gap: 16px;
-    min-height: 264px;
-    padding: 22px 24px 26px;
+    gap: 14px;
+    min-height: 280px;
+    padding: 26px 26px 28px;
+    transition: background 0.2s ease;
   }
+  .zone:hover { background: color-mix(in srgb, var(--accent) 3%, transparent); }
   .zone + .zone { border-left: 1px solid var(--line); }
 
   .zone-label {
     margin: 0;
     font-family: var(--mono);
-    font-size: 12px;
-    letter-spacing: 0.08em;
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: 0.06em;
     text-transform: uppercase;
-    color: var(--muted);
+    color: var(--accent);
   }
 
-  .zone-hint { margin: 0; font-size: 13.5px; color: var(--muted); }
+  .zone-hint { margin: 0; font-size: 14px; color: var(--muted); }
 
-  .zone-prose { margin: auto 0; font-size: 14.5px; line-height: 1.7; color: var(--muted); }
+  /* Pinned to the bottom so the Arrow zone's prose aligns with the demos in
+     the Ring and I-beam zones. */
+  .zone-prose { margin: auto 0 0; font-size: 14.5px; line-height: 1.7; color: var(--muted); }
   :root[data-lang="zh"] .zone-prose { line-height: 1.85; }
 
-  .zone-demo { display: flex; flex-direction: column; align-items: flex-start; gap: 16px; margin-top: auto; width: 100%; }
+  .zone-demo { display: flex; flex-direction: column; align-items: flex-start; gap: 14px; margin-top: auto; width: 100%; }
 
   .demo-link {
+    align-self: flex-start;
     color: var(--accent);
-    font-size: 14.5px;
+    font-size: 15px;
     text-decoration: none;
     border-bottom: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
-    padding-bottom: 1px;
+    padding-bottom: 2px;
+    transition: border-color 0.15s ease, gap 0.15s ease;
   }
   .demo-link:hover { border-bottom-color: var(--accent); }
 
   .demo-btn {
-    padding: 8px 15px;
+    padding: 10px 20px;
     background: var(--text);
     border: 1px solid transparent;
-    border-radius: 7px;
+    border-radius: 10px;
     color: var(--bg);
-    font-size: 13.5px;
+    font-size: 14px;
+    font-weight: 500;
     cursor: pointer;
-    transition: opacity 0.15s ease;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
   }
-  .demo-btn:hover { opacity: 0.85; }
+  .demo-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 18px color-mix(in srgb, var(--accent) 22%, transparent); }
 
   .demo-input {
     width: 100%;
-    padding: 7px 0;
-    background: none;
-    border: 0;
-    border-bottom: 1px solid var(--line-strong);
+    padding: 11px 14px;
+    background: var(--chip);
+    border: 1px solid var(--line-strong);
+    border-radius: 10px;
     color: var(--text);
     font-size: 14.5px;
     outline: none;
-    transition: border-color 0.15s ease;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
   }
   .demo-input::placeholder { color: var(--faint); }
-  .demo-input:focus { border-bottom-color: var(--accent); }
+  .demo-input:focus {
+    border-color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 5%, transparent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 14%, transparent);
+  }
 
   /* ── Panels ────────────────────────────────────────────────────────────── */
   .panel {
@@ -535,24 +557,34 @@
   .panel p { margin: 0; font-size: 14px; line-height: 1.7; color: var(--muted); }
 
   /* ── Controls ──────────────────────────────────────────────────────────── */
-  .rows { display: flex; flex-direction: column; }
+  /* Two columns: colour + sliders on the left, the toggle switches to their
+     right behind a divider. The left column is capped so the sliders stay
+     short and the panel reads as a tidy spec sheet. */
+  .rows {
+    display: grid;
+    grid-template-columns: minmax(0, 300px) auto;
+    gap: 40px;
+    align-items: start;
+  }
+  .rows-main { display: flex; flex-direction: column; }
+  .rows-side { border-left: 1px solid var(--line); padding-left: 36px; padding-top: 15px; }
 
   .row {
     display: grid;
-    grid-template-columns: 116px minmax(0, 1fr);
+    grid-template-columns: 72px minmax(0, 1fr);
     align-items: center;
-    gap: 20px;
-    padding: 12px 0;
+    gap: 18px;
+    padding: 15px 0;
   }
   .row + .row { border-top: 1px solid var(--line); }
-  .row > .key { font-size: 13.5px; color: var(--muted); }
+  .row > .key { font-size: 14px; color: var(--muted); }
 
   .value {
-    min-width: 5ch;
+    min-width: 4ch;
     font-family: var(--mono);
-    font-size: 12px;
+    font-size: 12.5px;
     font-variant-numeric: tabular-nums;
-    color: var(--faint);
+    color: var(--text);
     text-align: right;
   }
 
@@ -562,67 +594,105 @@
   input[type="range"] {
     -webkit-appearance: none;
     appearance: none;
-    height: 18px;
+    height: 20px;
     background: none;
     cursor: pointer;
   }
-  input[type="range"]::-webkit-slider-runnable-track { height: 2px; background: var(--line-strong); border-radius: 1px; }
+  input[type="range"]::-webkit-slider-runnable-track { height: 3px; border-radius: 2px; background: var(--line-strong); }
   input[type="range"]::-webkit-slider-thumb {
     -webkit-appearance: none;
-    width: 11px; height: 11px; margin-top: -4.5px;
-    border: 0; border-radius: 50%;
+    width: 15px; height: 15px; margin-top: -6px;
+    border: 3px solid var(--bg); border-radius: 50%;
     background: var(--accent);
+    box-shadow: 0 0 0 1px var(--line-strong);
+    transition: transform 0.12s ease;
   }
-  input[type="range"]::-moz-range-track { height: 2px; background: var(--line-strong); border-radius: 1px; }
-  input[type="range"]::-moz-range-thumb { width: 11px; height: 11px; border: 0; border-radius: 50%; background: var(--accent); }
+  input[type="range"]:hover::-webkit-slider-thumb { transform: scale(1.15); }
+  input[type="range"]::-moz-range-track { height: 3px; border-radius: 2px; background: var(--line-strong); }
+  input[type="range"]::-moz-range-thumb {
+    width: 13px; height: 13px;
+    border: 3px solid var(--bg); border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 0 1px var(--line-strong);
+  }
 
-  .colour { display: flex; align-items: center; gap: 14px; }
+  .colour { display: flex; align-items: center; gap: 16px; }
 
   .swatch-input {
-    width: 30px; height: 30px; padding: 0;
+    flex: none;
+    width: 34px; height: 34px; padding: 0;
+    aspect-ratio: 1;
     border: 1px solid var(--line-strong);
-    border-radius: 8px;
+    border-radius: 9px;
     background: none;
     cursor: pointer;
+    transition: transform 0.12s ease, border-color 0.15s ease;
   }
+  .swatch-input:hover { transform: scale(1.06); border-color: var(--accent); }
   .swatch-input::-webkit-color-swatch-wrapper { padding: 3px; }
-  .swatch-input::-webkit-color-swatch { border: 0; border-radius: 5px; }
-  .swatch-input::-moz-color-swatch { border: 0; border-radius: 5px; }
+  .swatch-input::-webkit-color-swatch { border: 0; border-radius: 6px; }
+  .swatch-input::-moz-color-swatch { border: 0; border-radius: 6px; }
 
-  .presets { display: flex; gap: 8px; }
+  .presets { display: flex; gap: 9px; }
 
   .preset {
-    width: 18px; height: 18px; padding: 0;
+    width: 20px; height: 20px; padding: 0;
     border: 1px solid transparent;
     border-radius: 50%;
     cursor: pointer;
     transition: transform 0.12s ease, box-shadow 0.12s ease;
   }
-  .preset:hover { transform: scale(1.15); }
-  .preset[aria-pressed="true"] { box-shadow: 0 0 0 1.5px var(--bg), 0 0 0 3px currentColor; }
+  .preset:hover { transform: scale(1.18); }
+  .preset[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--bg), 0 0 0 3.5px currentColor; }
 
-  .checks { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 20px; }
+  /* Options as a tidy vertical list: label left, toggle switch right. */
+  .checks { display: flex; flex-direction: column; gap: 16px; min-width: 210px; }
 
   .check {
-    display: inline-flex;
+    display: flex;
     align-items: center;
-    gap: 8px;
-    font-size: 13.5px;
+    justify-content: space-between;
+    gap: 16px;
+    font-size: 14px;
     color: var(--muted);
     cursor: pointer;
   }
-  .check input { width: 14px; height: 14px; accent-color: var(--accent); cursor: pointer; }
+  .check:hover { color: var(--text); }
+
+  .check input {
+    appearance: none;
+    -webkit-appearance: none;
+    flex: none;
+    position: relative;
+    width: 38px; height: 22px;
+    border-radius: 999px;
+    background: var(--line-strong);
+    cursor: pointer;
+    transition: background 0.2s ease;
+  }
+  .check input::after {
+    content: "";
+    position: absolute;
+    top: 3px; left: 3px;
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .check input:checked { background: var(--accent); }
+  .check input:checked::after { transform: translateX(16px); }
 
   /* ── Code ──────────────────────────────────────────────────────────────── */
-  .tabs { display: flex; gap: 22px; margin-bottom: 14px; }
+  .tabs { display: flex; gap: 24px; margin-bottom: 16px; }
 
   .tab {
-    padding: 0 0 6px;
+    padding: 0 0 7px;
     background: none;
     border: 0;
-    border-bottom: 1px solid transparent;
+    border-bottom: 1.5px solid transparent;
     color: var(--faint);
-    font: 12.5px var(--mono);
+    font: 13px var(--mono);
     cursor: pointer;
     transition: color 0.15s ease, border-color 0.15s ease;
   }
@@ -631,19 +701,19 @@
 
   .code {
     border: 1px solid var(--line);
-    border-radius: 11px;
+    border-radius: 12px;
     background: var(--sunken);
     overflow: hidden;
   }
 
   pre {
     margin: 0;
-    padding: 18px 20px 20px;
+    padding: 20px 22px 22px;
     overflow-x: auto;
-    font-size: 12.5px;
-    line-height: 1.75;
+    font-size: 13px;
+    line-height: 1.8;
     color: var(--text);
-    opacity: 0.86;
+    opacity: 0.9;
     tab-size: 2;
   }
 
@@ -665,29 +735,33 @@
 
   .api li {
     display: grid;
-    grid-template-columns: 210px minmax(0, 1fr);
-    gap: 16px;
+    grid-template-columns: 220px minmax(0, 1fr);
+    gap: 18px;
     align-items: baseline;
-    padding: 11px 0;
-    font-size: 13.5px;
+    padding: 13px 12px;
+    margin: 0 -12px;
+    font-size: 14px;
     color: var(--muted);
+    border-radius: 9px;
+    transition: background 0.15s ease;
   }
+  .api li:hover { background: color-mix(in srgb, var(--accent) 5%, transparent); }
   .api li + li { border-top: 1px solid var(--line); }
-  .api code { font-size: 12.5px; color: var(--text); }
+  .api code { font-size: 13px; color: var(--text); }
 
   .note {
-    margin: 20px 0 0;
-    padding-top: 18px;
+    margin: 22px 0 0;
+    padding-top: 20px;
     border-top: 1px solid var(--line);
-    font-size: 13px;
+    font-size: 13.5px;
     line-height: 1.75;
     color: var(--muted);
   }
   .note code {
-    padding: 1.5px 6px;
+    padding: 2px 7px;
     border: 1px solid var(--line);
-    border-radius: 5px;
-    font-size: 12px;
+    border-radius: 6px;
+    font-size: 12.5px;
     color: var(--text);
   }
 
@@ -695,15 +769,27 @@
   .footer {
     display: flex;
     flex-wrap: wrap;
+    align-items: center;
     justify-content: space-between;
-    gap: 10px;
-    margin-top: 80px;
-    padding-top: 26px;
+    gap: 14px;
+    margin-top: 88px;
+    padding-top: 28px;
     border-top: 1px solid var(--line);
-    font-family: var(--mono);
-    font-size: 11.5px;
-    color: var(--faint);
   }
+
+  .footer-left { display: flex; align-items: center; gap: 18px; }
+  .footer-meta { font-family: var(--mono); font-size: 13px; color: var(--faint); }
+
+  .footer-icon {
+    display: inline-flex;
+    color: var(--faint);
+    text-decoration: none;
+    transition: color 0.15s ease, transform 0.15s ease;
+  }
+  .footer-icon:hover { color: var(--text); transform: translateY(-1px); }
+  .footer-icon .ti { font-size: 19px; line-height: 1; }
+
+  .footer-author { font-size: 14px; font-style: italic; color: var(--muted); }
 
   /* ── Missing bundle notice ─────────────────────────────────────────────── */
   .warn {
@@ -724,13 +810,15 @@
     .page { padding: 28px 20px 64px; }
     .masthead { margin-bottom: 52px; }
     .hero { grid-template-columns: 1fr; gap: 8px; }
-    .hero-art { width: 240px; margin: 0 auto; }
+    .hero-art { width: 320px; margin: 0 auto; }
     .stage { grid-template-columns: 1fr; margin-top: 48px; }
     .zone { min-height: 0; }
     .zone + .zone { border-left: 0; border-top: 1px solid var(--line); }
     .zone-prose { margin: 4px 0 0; }
     .panel { grid-template-columns: 1fr; gap: 22px; margin-top: 48px; padding: 34px 0; }
-    .row { grid-template-columns: 96px minmax(0, 1fr); gap: 14px; }
+    .rows { grid-template-columns: 1fr; gap: 28px; }
+    .rows-side { border-left: 0; padding-left: 0; border-top: 1px solid var(--line); padding-top: 24px; }
+    .row { grid-template-columns: 76px minmax(0, 1fr); gap: 16px; }
     .api li { grid-template-columns: 1fr; gap: 4px; }
     .tabs { gap: 16px; overflow-x: auto; }
   }
@@ -738,10 +826,11 @@
   @media (prefers-reduced-motion: reduce) {
     * { transition: none !important; animation: none !important; }
 
-    /* With the timeline frozen, show a single legible still of the scene. */
-    .art-cursor { opacity: 1; translate: 2px -2px; }
-    .art-arrow { opacity: 1; }
-    .art-ring, .art-bar { opacity: 0; }
-    .art-button { opacity: 1; translate: 0 0; scale: 1; }
-    .art-field { opacity: 0; }
+    /* With the timeline frozen, show a single legible still of the scene:
+       an empty field with the I-beam in it, and a hollow heart. */
+    .art-ui { opacity: 1; }
+    .art-cursor { opacity: 1; translate: 22px 29px; }
+    .art-arrow, .art-ring, .heart-solid { opacity: 0; }
+    .art-bar, .heart-hollow { opacity: 1; }
+    .art-typed { clip-path: inset(0 100% 0 0); }
   }

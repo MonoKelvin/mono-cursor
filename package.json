@@ -2,6 +2,22 @@
   "name": "mono-cursor",
   "version": "1.0.0",
   "description": "A framework-agnostic custom cursor system for Electron, Tauri, React, Vue, Solid, Svelte, Next.js, and any JS+CSS stack",
+  "author": {
+    "name": "MonoKelvin",
+    "url": "https://www.monokelvin.cn"
+  },
+  "license": "MIT",
+  "homepage": "https://github.com/MonoKelvin/mono-cursor#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MonoKelvin/mono-cursor.git"
+  },
+  "bugs": {
+    "url": "https://github.com/MonoKelvin/mono-cursor/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -29,14 +45,19 @@
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "!dist/**/*.map",
+    "README.md",
+    "README.zh.md",
+    "LICENSE"
   ],
   "scripts": {
     "build": "tsup src/index.ts src/react.tsx src/vue.ts src/solid.ts --format cjs,esm,iife --dts --clean --splitting false && node -e \"require('fs').copyFileSync('dist/index.global.js','example/mono-cursor.global.js')\"",
     "dev": "tsup src/index.ts src/react.tsx src/vue.ts src/solid.ts --format cjs,esm,iife --dts --watch --splitting false",
     "test": "vitest run",
     "test:watch": "vitest",
-    "example:dev": "npm run build && npx serve example -l 4173"
+    "example:dev": "npm run build && npx serve example -l 4173",
+    "prepublishOnly": "npm run test && npm run build"
   },
   "keywords": [
     "cursor",
@@ -51,7 +72,6 @@
     "solid",
     "svelte"
   ],
-  "license": "MIT",
   "devDependencies": {
     "@types/node": "^20.11.0",
     "@types/react": "^19.3.0",

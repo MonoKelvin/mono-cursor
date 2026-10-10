@@ -5,8 +5,8 @@ export const Z_INDEX = 999999
 export const DEFAULT_OPTIONS: Required<MonoCursorOptions> = {
   color: '#6366f1',
   arrowSize: 26,
-  ringSize: 22,
-  ringBorderWidth: 1.5,
+  ringSize: 24,
+  ringBorderWidth: 1.8,
   hideDefaultCursor: true,
   enableCircle: true,
   shadow: true,

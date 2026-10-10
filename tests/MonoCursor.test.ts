@@ -141,8 +141,8 @@ describe('options', () => {
     expect(DEFAULT_OPTIONS).toEqual({
       color: '#6366f1',
       arrowSize: 26,
-      ringSize: 22,
-      ringBorderWidth: 1.5,
+      ringSize: 24,
+      ringBorderWidth: 1.8,
       hideDefaultCursor: true,
       enableCircle: true,
       shadow: true,

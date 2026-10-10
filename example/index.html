@@ -4,7 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>mono-cursor — a cursor that knows what it's pointing at</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M5.5 3.2 L18.8 11.4 L12.6 12.8 L9.9 19.6 Z' fill='%236366f1' stroke='%23fff' stroke-width='1.6' stroke-linejoin='round' paint-order='stroke'/></svg>">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0.6 -0.1 19 19'><path d='M5.5 3.2 L18.8 11.4 L12.6 12.8 L9.9 19.6 Z' fill='%236366f1' stroke='%23fff' stroke-width='1.6' stroke-linejoin='round' paint-order='stroke'/></svg>">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
 
 <!-- Theme and language are decided before the first paint, so the page never
      flashes the wrong one. The IP check below only refines the language. -->
@@ -35,7 +36,7 @@
 
   <header class="masthead">
     <div class="brand">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5.5 3.2 L18.8 11.4 L12.6 12.8 L9.9 19.6 Z"/></svg>
+      <svg viewBox="2.65 1.9 19 19" aria-hidden="true"><path d="M5.5 3.2 L18.8 11.4 L12.6 12.8 L9.9 19.6 Z"/></svg>
       <span>mono-cursor</span>
       <span class="brand-sep" aria-hidden="true">|</span>
       <a class="author-link" href="https://www.monokelvin.cn" target="_blank" rel="noreferrer noopener">by MonoKelvin</a>
@@ -48,22 +49,17 @@
       </div>
 
       <a class="icon-btn" href="https://github.com/MonoKelvin/mono-cursor" target="_blank" rel="noreferrer noopener" aria-label="Source on GitHub">
-        <svg class="icon-github" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 .5C5.7.5.5 5.7.5 12c0 5.1 3.3 9.4 7.9 10.9.6.1.8-.3.8-.6v-2c-3.2.7-3.9-1.5-3.9-1.5-.5-1.3-1.3-1.7-1.3-1.7-1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.7 1.3 3.4 1 .1-.8.4-1.3.7-1.6-2.6-.3-5.3-1.3-5.3-5.8 0-1.3.5-2.3 1.2-3.1-.1-.3-.5-1.5.1-3.1 0 0 1-.3 3.3 1.2a11.5 11.5 0 0 1 6 0c2.3-1.5 3.3-1.2 3.3-1.2.6 1.6.2 2.8.1 3.1.8.8 1.2 1.8 1.2 3.1 0 4.5-2.7 5.5-5.3 5.8.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6 4.6-1.5 7.9-5.8 7.9-10.9C23.5 5.7 18.3.5 12 .5z"/></svg>
+        <i class="ti ti-brand-github" aria-hidden="true"></i>
       </a>
 
       <!-- Not on npm yet — swap in the real package page once it is published. -->
       <a class="icon-btn" href="https://www.npmjs.com/package/mono-cursor" target="_blank" rel="noreferrer noopener" aria-label="Package on npm">
-        <svg class="icon-npm" viewBox="0 0 24 24" aria-hidden="true"><path d="M1.76 0C.79 0 0 .79 0 1.76v20.48C0 23.21.79 24 1.76 24h20.48c.97 0 1.76-.79 1.76-1.76V1.76C24 .79 23.21 0 22.24 0H1.76zm3.37 5.32l13.84.02-.01 13.84h-3.46l.01-10.38h-3.46l.01 10.38H5.11l.02-13.86z"/></svg>
+        <i class="ti ti-brand-npm" aria-hidden="true"></i>
       </a>
 
       <button class="icon-btn" type="button" id="theme" aria-label="Toggle colour theme">
-        <svg class="icon-sun" viewBox="0 0 24 24" aria-hidden="true">
-          <circle cx="12" cy="12" r="4.2"/>
-          <path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M18.7 5.3l-1.6 1.6M6.9 17.1l-1.6 1.6"/>
-        </svg>
-        <svg class="icon-moon" viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M20 14.2A8.2 8.2 0 0 1 9.8 4a8.5 8.5 0 1 0 10.2 10.2z"/>
-        </svg>
+        <i class="ti ti-sun icon-sun" aria-hidden="true"></i>
+        <i class="ti ti-moon icon-moon" aria-hidden="true"></i>
       </button>
     </div>
   </header>
@@ -88,8 +84,8 @@
       <div class="art-ui">
         <div class="art-field"><span class="art-typed">mono-cursor</span></div>
         <button class="art-heart" type="button" tabindex="-1">
-          <svg class="heart heart-hollow" viewBox="0 0 24 24"><path d="M12 20.3l-1.4-1.3C5.9 14.7 3 12 3 8.6 3 6 5 4 7.5 4c1.6 0 3.1.8 4 2 .9-1.2 2.4-2 4-2C22 4 24 6 24 8.6c0 3.4-2.9 6.1-7.6 10.4L12 20.3z" transform="translate(-1.5 0)"/></svg>
-          <svg class="heart heart-solid" viewBox="0 0 24 24"><path d="M12 20.3l-1.4-1.3C5.9 14.7 3 12 3 8.6 3 6 5 4 7.5 4c1.6 0 3.1.8 4 2 .9-1.2 2.4-2 4-2C22 4 24 6 24 8.6c0 3.4-2.9 6.1-7.6 10.4L12 20.3z" transform="translate(-1.5 0)"/></svg>
+          <i class="ti ti-heart heart heart-hollow" aria-hidden="true"></i>
+          <i class="ti heart heart-solid" aria-hidden="true"></i>
         </button>
         <div class="art-cursor">
           <svg class="art-arrow" viewBox="0 0 24 24"><path d="M5.5 3.2 L18.8 11.4 L12.6 12.8 L9.9 19.6 Z"/></svg>
@@ -135,46 +131,47 @@
     </div>
 
     <div class="rows">
-      <div class="row">
-        <span class="key" id="k-colour" data-i18n="ctrlColour"></span>
-        <div class="colour">
-          <input class="swatch-input" type="color" id="colour" value="#6366f1" aria-labelledby="k-colour">
-          <div class="presets" id="presets"></div>
+      <div class="rows-main">
+        <div class="row">
+          <span class="key" id="k-colour" data-i18n="ctrlColour"></span>
+          <div class="colour">
+            <input class="swatch-input" type="color" id="colour" value="#6366f1" aria-labelledby="k-colour">
+            <div class="presets" id="presets"></div>
+          </div>
+        </div>
+
+        <div class="row">
+          <label class="key" for="arrow" data-i18n="ctrlArrow"></label>
+          <div class="slider">
+            <input type="range" id="arrow" min="14" max="48" step="1" value="26">
+            <span class="value" id="v-arrow">26px</span>
+          </div>
+        </div>
+
+        <div class="row">
+          <label class="key" for="ring" data-i18n="ctrlRing"></label>
+          <div class="slider">
+            <input type="range" id="ring" min="12" max="56" step="1" value="24">
+            <span class="value" id="v-ring">24px</span>
+          </div>
+        </div>
+
+        <div class="row">
+          <label class="key" for="border" data-i18n="ctrlBorder"></label>
+          <div class="slider">
+            <input type="range" id="border" min="0.5" max="4" step="0.1" value="1.8">
+            <span class="value" id="v-border">1.8px</span>
+          </div>
         </div>
       </div>
 
-      <div class="row">
-        <label class="key" for="arrow" data-i18n="ctrlArrow"></label>
-        <div class="slider">
-          <input type="range" id="arrow" min="14" max="48" step="1" value="26">
-          <span class="value" id="v-arrow">26px</span>
-        </div>
-      </div>
-
-      <div class="row">
-        <label class="key" for="ring" data-i18n="ctrlRing"></label>
-        <div class="slider">
-          <input type="range" id="ring" min="12" max="56" step="1" value="22">
-          <span class="value" id="v-ring">22px</span>
-        </div>
-      </div>
-
-      <div class="row">
-        <label class="key" for="border" data-i18n="ctrlBorder"></label>
-        <div class="slider">
-          <input type="range" id="border" min="0.5" max="4" step="0.5" value="1.5">
-          <span class="value" id="v-border">1.5px</span>
-        </div>
-      </div>
-
-      <div class="row">
-        <span class="key" data-i18n="ctrlOptions"></span>
+      <div class="rows-side">
         <div class="checks">
-          <label class="check"><input type="checkbox" id="hide-default" checked><span data-i18n="optHideDefault"></span></label>
-          <label class="check"><input type="checkbox" id="shadow" checked><span data-i18n="optShadow"></span></label>
-          <label class="check"><input type="checkbox" id="ring-on" checked><span data-i18n="optRing"></span></label>
-          <label class="check"><input type="checkbox" id="click-effect" checked><span data-i18n="optClick"></span></label>
-          <label class="check"><input type="checkbox" id="active" checked><span data-i18n="optEnabled"></span></label>
+          <label class="check"><span data-i18n="optHideDefault"></span><input type="checkbox" id="hide-default" checked></label>
+          <label class="check"><span data-i18n="optShadow"></span><input type="checkbox" id="shadow" checked></label>
+          <label class="check"><span data-i18n="optRing"></span><input type="checkbox" id="ring-on" checked></label>
+          <label class="check"><span data-i18n="optClick"></span><input type="checkbox" id="click-effect" checked></label>
+          <label class="check"><span data-i18n="optEnabled"></span><input type="checkbox" id="active" checked></label>
         </div>
       </div>
     </div>
@@ -200,7 +197,7 @@
 <pre data-panel="vanilla">import { MonoCursor } from 'mono-cursor'
 
 // once, at startup
-MonoCursor.init({ color: '#6366f1', ringSize: 22 })
+MonoCursor.init({ color: '#6366f1', ringSize: 24 })
 
 // from anywhere — no ref needed
 MonoCursor.setColor('#f59e0b')
@@ -219,7 +216,7 @@ MonoCursor.destroy()        // remove the layer</pre>
 
 export function App() {
   return (
-    &lt;MonoCursorProvider color="#6366f1" ringSize={22}&gt;
+    &lt;MonoCursorProvider color="#6366f1" ringSize={24}&gt;
       &lt;Page /&gt;
     &lt;/MonoCursorProvider&gt;
   )
@@ -255,8 +252,16 @@ const { setColor } = useMonoCursor({ color: '#6366f1' })</pre>
   </section>
 
   <footer class="footer">
-    <span>MIT · v1.0.0</span>
-    <a class="author-link" href="https://www.monokelvin.cn" target="_blank" rel="noreferrer noopener">by MonoKelvin</a>
+    <div class="footer-left">
+      <span class="footer-meta">MIT · v1.0.0</span>
+      <a class="footer-icon" href="https://github.com/MonoKelvin/mono-cursor" target="_blank" rel="noreferrer noopener" aria-label="Source on GitHub">
+        <i class="ti ti-brand-github" aria-hidden="true"></i>
+      </a>
+      <a class="footer-icon" href="https://www.npmjs.com/package/mono-cursor" target="_blank" rel="noreferrer noopener" aria-label="Package on npm">
+        <i class="ti ti-brand-npm" aria-hidden="true"></i>
+      </a>
+    </div>
+    <a class="author-link footer-author" href="https://www.monokelvin.cn" target="_blank" rel="noreferrer noopener">by MonoKelvin</a>
   </footer>
 </div>
 
