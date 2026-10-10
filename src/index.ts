@@ -1,16 +1,43 @@
-import { DEFAULT_OPTIONS } from './constants'
+import { ARROW_PATH, ARROW_VIEWBOX, DEFAULT_OPTIONS } from './constants'
 import { injectStyles } from './styles'
-import type { MonoCursorOptions, CursorState, CursorType } from './types'
+import type { MonoCursorOptions, CursorState } from './types'
+
+// ─── Hover detection ─────────────────────────────────────────────────────────
+
+/** Clickable targets → ring. */
+const POINTER_SELECTOR = [
+  'a',
+  'button',
+  '[role=button]',
+  '[role=link]',
+  '[role=tab]',
+  'select',
+  'label',
+  'summary',
+  '[data-cursor=interactive]',
+  '[data-cursor=pointer]',
+  '[data-cursor=link]',
+  '[data-cursor=circle]',
+].join(',')
+
+/** Typeable targets → I-beam. */
+const TEXT_SELECTOR = 'input, textarea, [contenteditable=true], [data-cursor=text]'
+
+/** Inputs where an I-beam would be wrong — they get the ring instead. */
+const NON_TEXT_INPUT = new Set([
+  'range', 'checkbox', 'radio', 'button', 'submit', 'reset', 'color', 'file', 'image',
+])
+
+/** A docked DevTools panel shrinks the viewport by at least this much. */
+const DEVTOOLS_GAP = 160
+
+const ARROW_SVG =
+  `<svg class="mc-arrow" viewBox="0 0 ${ARROW_VIEWBOX} ${ARROW_VIEWBOX}" aria-hidden="true">` +
+  `<path d="${ARROW_PATH}"/></svg><i class="mc-ring"></i>`
 
 // ─── Module-level singleton state ────────────────────────────────────────────
 let _singletonInstance: MonoCursor | null = null
 let _singletonOptions: Required<MonoCursorOptions> = { ...DEFAULT_OPTIONS }
-
-// ─── Module-level helpers ─────────────────────────────────────────────────────
-function _destroyInstance(): void {
-  _singletonInstance?._destroy()
-  _singletonInstance = null
-}
 
 export class MonoCursor {
   // ─── Static singleton API ────────────────────────────────────────────────
@@ -18,209 +45,189 @@ export class MonoCursor {
   /**
    * Global singleton — call once at app startup.
    * Safe to call multiple times; only initializes on the first call.
+   * Options are sticky: each call merges over whatever was configured before.
    */
   static init(options: MonoCursorOptions = {}): MonoCursor {
     if (!_singletonInstance) {
-      _singletonOptions = { ...DEFAULT_OPTIONS, ...options }
+      _singletonOptions = { ..._singletonOptions, ...options }
       _singletonInstance = new MonoCursor(_singletonOptions)._init()
     }
     return _singletonInstance
   }
 
-  /** Replace current global options and re-apply CSS variables */
+  /** Merge new options into the global options and re-apply the CSS variables. */
   static configure(options: MonoCursorOptions): MonoCursor {
-    _singletonOptions = { ..._singletonOptions, ...options }
+    MonoCursor._apply(options)
+    return _singletonInstance!
+  }
+
+  /** Resume the global cursor */
+  static enable(): void { _singletonInstance?._enable() }
+
+  /** Pause the global cursor — keeps the DOM intact */
+  static disable(): void { _singletonInstance?._disable() }
+
+  /** Remove the global cursor from the DOM */
+  static destroy(): void {
+    _singletonInstance?._destroy()
+    _singletonInstance = null
+  }
+
+  /** Alias for `init()` */
+  static create(options?: MonoCursorOptions): MonoCursor { return MonoCursor.init(options) }
+
+  // ─── Static setters — all proxy to the singleton ─────────────────────────
+
+  static setColor(color: string): void { MonoCursor._apply({ color }) }
+  static setArrowSize(arrowSize: number): void { MonoCursor._apply({ arrowSize }) }
+  static setRingSize(ringSize: number): void { MonoCursor._apply({ ringSize }) }
+  static setRingBorderWidth(ringBorderWidth: number): void { MonoCursor._apply({ ringBorderWidth }) }
+  static setHideDefaultCursor(hideDefaultCursor: boolean): void { MonoCursor._apply({ hideDefaultCursor }) }
+  static setEnableCircle(enableCircle: boolean): void { MonoCursor._apply({ enableCircle }) }
+  static setShadow(shadow: boolean): void { MonoCursor._apply({ shadow }) }
+  static setClickEffect(clickEffect: boolean): void { MonoCursor._apply({ clickEffect }) }
+
+  /** Force a state until the pointer next moves onto different content. */
+  static setState(state: CursorState): void { _singletonInstance?._setState(state) }
+
+  /** The global instance, or `null` when it has not been initialized. */
+  static getInstance(): MonoCursor | null { return _singletonInstance }
+
+  /**
+   * Store options for later and push them onto the live instance. Callable
+   * before `init()` — the values are then used as the init defaults.
+   */
+  private static _apply(patch: MonoCursorOptions): void {
+    const base = _singletonInstance ? _singletonInstance._opts : _singletonOptions
+    _singletonOptions = { ...base, ...patch }
     if (_singletonInstance) {
       _singletonInstance._opts = { ..._singletonOptions }
       _singletonInstance._applyCSS()
     }
-    return _singletonInstance!
   }
-
-  /** Enable the global cursor */
-  static enable(): void { _singletonInstance?._enable() }
-
-  /** Disable (pause) the global cursor — keeps DOM intact */
-  static disable(): void { _singletonInstance?._disable() }
-
-  /** Destroy the global singleton */
-  static destroy(): void { _destroyInstance() }
-
-  /** Shortcut: create + init in one call (static factory) */
-  static create(options?: MonoCursorOptions): MonoCursor { return MonoCursor.init(options) }
-
-  // ─── Static setters — all proxy to the singleton ───────────────────────
-
-  static setColor(color: string): void { _singletonInstance?._setColor(color) }
-  static setDotSize(size: number): void { _singletonInstance?._setDotSize(size) }
-  static setRingSize(size: number): void { _singletonInstance?._setRingSize(size) }
-  static setRingBorderWidth(width: number): void { _singletonInstance?._setRingBorderWidth(width) }
-  static setLerpFactor(factor: number): void { _singletonInstance?._setLerpFactor(factor) }
-  static setState(state: CursorState): void { _singletonInstance?._setState(state) }
-  static setHideDefaultCursor(hide: boolean): void { _singletonInstance?._setHideDefaultCursor(hide) }
-  static setEnableCircle(enable: boolean): void { _singletonInstance?._setEnableCircle(enable) }
-
-  /** Returns the current global instance (may be null if not initialized) */
-  static getInstance(): MonoCursor | null { return _singletonInstance }
-
-  /** Reset the singleton — for testing only */
-  static _reset(): void { _destroyInstance() }
 
   // ─── Instance implementation ─────────────────────────────────────────────
 
   private _container: HTMLElement | null = null
-  private _dot: HTMLElement | null = null
-  private _ring: HTMLElement | null = null
   private _state: CursorState = 'default'
   private _visible = false
   private _enabled = true
-  private _rafId: number | null = null
-  private _target = { x: -1000, y: -1000 }
-  private _current = { x: -1000, y: -1000 }
-  private _listeners = new Map<string, EventListener>()
+  private _devtoolsOpen = false
+  private _devtoolsTimer: number | null = null
   private _opts: Required<MonoCursorOptions>
 
   constructor(options: MonoCursorOptions = {}) {
     this._opts = { ...DEFAULT_OPTIONS, ...options }
   }
 
-  // ─── Internal init (called by static init() / create()) ─────────────────
+  // ─── Lifecycle ───────────────────────────────────────────────────────────
 
   private _init(): this {
-    if (typeof window === 'undefined' || !document) return this
+    if (typeof window === 'undefined' || typeof document === 'undefined') return this
     if (this._container) return this
 
+    // Touch devices have no pointer to replace, and a cursor that cannot be
+    // eased or followed is worse than the native one for reduced motion.
+    if (!window.matchMedia?.('(pointer: fine)').matches) return this
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return this
+
     injectStyles()
-    this._createElements()
+
+    const container = document.createElement('div')
+    container.className = 'mc-container'
+    container.dataset.state = 'default'
+    container.setAttribute('aria-hidden', 'true')
+    container.innerHTML = ARROW_SVG
+    ;(document.body || document.documentElement).appendChild(container)
+    this._container = container
+
     this._attachListeners()
     this._applyCSS()
     return this
   }
 
-  // ─── Element creation ────────────────────────────────────────────────────
-
-  private _createElements(): void {
-    this._container = document.createElement('div')
-    this._container.className = 'mc-container'
-    this._container.setAttribute('aria-hidden', 'true')
-
-    this._dot = document.createElement('div')
-    this._dot.className = 'mc-dot'
-
-    this._ring = document.createElement('div')
-    this._ring.className = 'mc-ring'
-
-    this._container.appendChild(this._dot)
-    this._container.appendChild(this._ring)
-    document.body.appendChild(this._container)
+  /** Remove the cursor from the DOM and detach every listener. */
+  _destroy(): void {
+    this._detachListeners()
+    this._container?.remove()
+    this._container = null
+    this._visible = false
+    this._state = 'default'
+    document.documentElement.classList.remove('has-mc-cursor', 'devtools-open', 'scrollbar-active')
   }
 
   // ─── Event listeners ─────────────────────────────────────────────────────
 
   private _attachListeners(): void {
-    const onMove = this._onMouseMove.bind(this)
-    const onOver = this._onMouseOver.bind(this)
-    const onLeave = this._onMouseLeave.bind(this)
-    const onDown = this._onPointerDown.bind(this)
-    const onUp = this._onPointerUp.bind(this)
-    const onScroll = this._onScroll.bind(this)
-
-    this._listeners.set('mousemove', onMove)
-    this._listeners.set('mouseover', onOver)
-    this._listeners.set('mouseleave', onLeave)
-    this._listeners.set('pointerdown', onDown)
-    this._listeners.set('pointerup', onUp)
-    this._listeners.set('scroll', onScroll)
-
-    document.addEventListener('mousemove', onMove, { passive: true })
-    document.addEventListener('mouseover', onOver)
-    document.addEventListener('mouseleave', onLeave)
-    document.addEventListener('pointerdown', onDown)
-    document.addEventListener('pointerup', onUp)
-    document.addEventListener('scroll', onScroll, { passive: true })
+    // `pointermove` as well as `mousemove`: during a drag the browser may
+    // implicitly capture the pointer and stop delivering mousemove.
+    window.addEventListener('mousemove', this._onMove, { passive: true })
+    window.addEventListener('pointermove', this._onMove, { passive: true })
+    window.addEventListener('mouseover', this._onOver, { passive: true })
+    window.addEventListener('pointerdown', this._onDown, { passive: true })
+    window.addEventListener('pointerup', this._onUp, { passive: true })
+    window.addEventListener('mouseup', this._onUp, { passive: true })
+    window.addEventListener('resize', this._syncDevTools)
+    window.addEventListener('focus', this._syncDevTools)
+    this._devtoolsTimer = window.setInterval(this._syncDevTools, 1000)
+    this._syncDevTools()
   }
 
   private _detachListeners(): void {
-    this._listeners.forEach((listener, event) => {
-      const opts = event === 'scroll' ? { passive: true } as AddEventListenerOptions : undefined
-      document.removeEventListener(event, listener, opts)
-    })
-    this._listeners.clear()
-  }
-
-  // ─── Event handlers ───────────────────────────────────────────────────────
-
-  private _onMouseMove(e: Event): void {
-    const ev = e as MouseEvent
-    this._target.x = ev.clientX
-    this._target.y = ev.clientY
-    if (!this._visible && this._enabled) {
-      this._show()
+    window.removeEventListener('mousemove', this._onMove)
+    window.removeEventListener('pointermove', this._onMove)
+    window.removeEventListener('mouseover', this._onOver)
+    window.removeEventListener('pointerdown', this._onDown)
+    window.removeEventListener('pointerup', this._onUp)
+    window.removeEventListener('mouseup', this._onUp)
+    window.removeEventListener('resize', this._syncDevTools)
+    window.removeEventListener('focus', this._syncDevTools)
+    if (this._devtoolsTimer !== null) {
+      window.clearInterval(this._devtoolsTimer)
+      this._devtoolsTimer = null
     }
   }
 
-  private _onMouseOver(e: Event): void {
-    const ev = e as MouseEvent
-    const el = ev.target as HTMLElement
-    if (!el || el === this._container) return
-    const type = this._detectCursorType(el)
-    if (type !== this._state) {
-      this._setState(type)
+  // ─── Event handlers ──────────────────────────────────────────────────────
+
+  /**
+   * Written straight from the event — no rAF hop, no easing. Writing only
+   * `transform` triggers no layout, so the extra writes cost nothing while the
+   * cursor lands on the same frame as the system pointer.
+   */
+  private _onMove = (event: MouseEvent): void => {
+    if (!this._enabled || !this._container) return
+    this._container.style.transform = `translate3d(${event.clientX}px, ${event.clientY}px, 0)`
+    // Light up on the first move, then never hide again.
+    if (!this._visible) this._show()
+  }
+
+  private _onOver = (event: MouseEvent): void => {
+    const target = event.target
+    if (!(target instanceof Element) || target === this._container) return
+    const next = detectState(target)
+    if (next !== this._state) this._setState(next)
+  }
+
+  private _onDown = (event: MouseEvent): void => {
+    if (!this._enabled || !this._container) return
+    if (this._hitsScrollbar(event)) {
+      document.documentElement.classList.add('scrollbar-active')
+      return
     }
+    if (this._opts.clickEffect) this._container.classList.add('mc-pressed')
   }
 
-  private _onMouseLeave(): void {
-    this._hide()
-  }
-
-  private _onPointerDown(): void {
-    this._container?.classList.add('mc-pressed')
-  }
-
-  private _onPointerUp(): void {
+  private _onUp = (): void => {
     this._container?.classList.remove('mc-pressed')
+    document.documentElement.classList.remove('scrollbar-active')
   }
 
-  private _onScroll(): void {
-    this._target = { x: -1000, y: -1000 }
-    this._current = { x: -1000, y: -1000 }
-    if (this._container) {
-      this._container.style.transform = 'translate3d(-1000px, -1000px, 0)'
-    }
-  }
+  // ─── State ───────────────────────────────────────────────────────────────
 
-  // ─── Cursor type detection ───────────────────────────────────────────────
-
-  private _detectCursorType(el: HTMLElement): CursorType {
-    if (!el || el.nodeType !== 1 /* Element node */ || el === document.documentElement) return 'default'
-
-    const tag = el.tagName.toLowerCase()
-    if (tag === 'input') {
-      const type = el.getAttribute('type')?.toLowerCase() ?? 'text'
-      // Text-like inputs get "text" cursor, others get pointer
-      if (['text', 'email', 'password', 'tel', 'search', 'number', 'date', 'time', 'month', 'week', 'datetime-local'].includes(type)) {
-        return 'text'
-      }
-      return 'pointer'
-    }
-    if (['a', 'button', 'select', 'label', 'summary', 'option', 'optgroup'].includes(tag)) return 'pointer'
-    if (el.hasAttribute('contenteditable')) return 'text'
-    if (el.closest('a, button, [role=button], [role=link], [data-cursor=interactive], [data-cursor=link]')) return 'pointer'
-    if (el.closest('input:not([type=range]), textarea, [contenteditable=true]')) return 'text'
-
-    const custom = el.dataset.cursor
-    if (custom === 'pointer' || custom === 'link' || custom === 'interactive') return 'pointer'
-    if (custom === 'text') return 'text'
-    if (custom === 'circle') return 'circle'
-
-    return 'default'
-  }
-
-  private _setState(type: CursorState): void {
-    this._state = type
-    if (this._container) {
-      this._container.dataset.state = type
-    }
+  private _setState(state: CursorState): void {
+    this._state = state
+    if (this._container) this._container.dataset.state = state
   }
 
   // ─── Visibility ──────────────────────────────────────────────────────────
@@ -229,166 +236,146 @@ export class MonoCursor {
     if (!this._container) return
     this._visible = true
     this._container.classList.add('mc-visible')
-    document.body.classList.add('mc-active')
-    this._startLoop()
+    this._syncSystemCursor()
   }
 
   private _hide(): void {
     if (!this._container) return
     this._visible = false
     this._container.classList.remove('mc-visible')
-    document.body.classList.remove('mc-active')
+    this._syncSystemCursor()
   }
 
-  private _startLoop(): void {
-    if (this._rafId !== null) return
-    this._tick()
+  /** The native pointer is hidden only while the custom one is actually drawn. */
+  private _syncSystemCursor(): void {
+    document.documentElement.classList.toggle(
+      'has-mc-cursor',
+      this._enabled && this._visible && this._opts.hideDefaultCursor,
+    )
   }
 
-  private _stopLoop(): void {
-    if (this._rafId !== null) {
-      cancelAnimationFrame(this._rafId)
-      this._rafId = null
-    }
+  private _enable(): void {
+    this._enabled = true
+    if (this._visible) this._show()
   }
 
-  private _tick = (): void => {
-    if (!this._enabled) {
-      this._rafId = null
-      return
-    }
-    const lerp = this._opts.lerpFactor
-    this._current.x += (this._target.x - this._current.x) * lerp
-    this._current.y += (this._target.y - this._current.y) * lerp
-    if (this._container) {
-      this._container.style.transform = `translate3d(${this._current.x}px, ${this._current.y}px, 0)`
-    }
-    const nextId = requestAnimationFrame(this._tick)
-    this._rafId = nextId
+  private _disable(): void {
+    this._enabled = false
+    this._container?.classList.remove('mc-visible')
+    this._syncSystemCursor()
   }
 
   // ─── CSS variables ───────────────────────────────────────────────────────
 
   private _applyCSS(): void {
-    if (!this._container) return
-    const o = this._opts
     const root = document.documentElement
+    const o = this._opts
 
     root.style.setProperty('--mc-color', o.color)
-    root.style.setProperty('--mc-dot-size', `${o.dotSize}px`)
+    root.style.setProperty('--mc-arrow-size', `${o.arrowSize}px`)
     root.style.setProperty('--mc-ring-size', `${o.ringSize}px`)
     root.style.setProperty('--mc-ring-border', `${o.ringBorderWidth}px`)
     root.style.setProperty('--mc-z-index', String(o.zIndex))
 
-    document.body.classList.toggle('mc-hide-default', o.hideDefaultCursor)
-    this._container.classList.toggle('mc-ring-disabled', !o.enableCircle)
+    this._container?.classList.toggle('mc-ring-off', !o.enableCircle)
+    this._container?.classList.toggle('mc-shadows-off', !o.shadow)
+    this._syncSystemCursor()
   }
 
-  // ─── Public API (instance methods — also called by static setters) ────────
+  // ─── Chrome overrides ────────────────────────────────────────────────────
 
-  private _setColor(color: string): void {
-    this._opts.color = color
-    document.documentElement.style.setProperty('--mc-color', color)
+  /**
+   * A docked DevTools panel shrinks the viewport, which is the only signal
+   * available to page script. While it is open the native pointer is released
+   * so the page stays inspectable; the cursor itself is never hidden or
+   * unmounted. Undocked DevTools cannot be detected — use
+   * `setHideDefaultCursor(false)` there.
+   */
+  private _syncDevTools = (): void => {
+    const open =
+      window.outerWidth - window.innerWidth > DEVTOOLS_GAP ||
+      window.outerHeight - window.innerHeight > DEVTOOLS_GAP
+    if (open === this._devtoolsOpen) return
+    this._devtoolsOpen = open
+    document.documentElement.classList.toggle('devtools-open', open)
   }
 
-  private _setDotSize(size: number): void {
-    this._opts.dotSize = size
-    document.documentElement.style.setProperty('--mc-dot-size', `${size}px`)
+  /**
+   * Native scrollbars sit above every fixed element, so pressing on a
+   * scrollbar trough releases the pointer for the duration of the drag.
+   * Deliberately conservative: only the trough outside the content box counts.
+   */
+  private _hitsScrollbar(event: MouseEvent): boolean {
+    const root = document.documentElement
+    if (event.clientX > root.clientWidth || event.clientY > root.clientHeight) return true
+
+    const target = event.target
+    if (!(target instanceof HTMLElement)) return false
+
+    const style = getComputedStyle(target)
+    const scrollY =
+      (style.overflowY === 'auto' || style.overflowY === 'scroll') &&
+      target.scrollHeight > target.clientHeight
+    const scrollX =
+      (style.overflowX === 'auto' || style.overflowX === 'scroll') &&
+      target.scrollWidth > target.clientWidth
+    if (!scrollY && !scrollX) return false
+
+    const rect = target.getBoundingClientRect()
+    if (scrollY && event.clientX - rect.left > target.clientLeft + target.clientWidth) return true
+    if (scrollX && event.clientY - rect.top > target.clientTop + target.clientHeight) return true
+    return false
   }
 
-  private _setRingSize(size: number): void {
-    this._opts.ringSize = size
-    document.documentElement.style.setProperty('--mc-ring-size', `${size}px`)
-  }
-
-  private _setRingBorderWidth(width: number): void {
-    this._opts.ringBorderWidth = width
-    document.documentElement.style.setProperty('--mc-ring-border', `${width}px`)
-  }
-
-  private _setLerpFactor(factor: number): void {
-    this._opts.lerpFactor = Math.max(0.01, Math.min(1, factor))
-  }
-
-  private _setHideDefaultCursor(hide: boolean): void {
-    this._opts.hideDefaultCursor = hide
-    document.body.classList.toggle('mc-hide-default', hide)
-  }
-
-  private _setEnableCircle(enable: boolean): void {
-    this._opts.enableCircle = enable
-    this._container?.classList.toggle('mc-ring-disabled', !enable)
-  }
-
-  /** Enable / resume the cursor */
-  private _enable(): void {
-    this._enabled = true
-    if (this._visible) {
-      this._startLoop()
-      this._container?.classList.add('mc-visible')
-      document.body.classList.add('mc-active')
-    }
-  }
-
-  /** Disable / pause the cursor — keeps DOM and listeners in place */
-  private _disable(): void {
-    this._enabled = false
-    this._stopLoop()
-    this._container?.classList.remove('mc-visible')
-    document.body.classList.remove('mc-active')
-  }
-
-  /** Fully destroy — removes from DOM, removes listeners */
-  _destroy(): void {
-    this._stopLoop()
-    this._detachListeners()
-    if (this._container?.parentNode) {
-      this._container.parentNode.removeChild(this._container)
-    }
-    document.body.classList.remove('mc-active', 'mc-hide-default')
-    this._container = null
-    this._dot = null
-    this._ring = null
-    this._visible = false
-    this._current = { x: -1000, y: -1000 }
-    this._target = { x: -1000, y: -1000 }
-  }
-
-  // ─── Public instance API (for non-singleton use) ─────────────────────────
+  // ─── Instance API (for non-singleton use) ────────────────────────────────
 
   init(): this { return this._init() }
-  destroy(): void { MonoCursor.destroy() }
+  destroy(): void { this._destroy() }
   enable(): void { this._enable() }
   disable(): void { this._disable() }
   showCursor(): void { this._show() }
   hideCursor(): void { this._hide() }
-  setColor(color: string): void { this._setColor(color) }
-  setDotSize(size: number): void { this._setDotSize(size) }
-  setRingSize(size: number): void { this._setRingSize(size) }
-  setRingBorderWidth(width: number): void { this._setRingBorderWidth(width) }
+  setColor(color: string): void { this._opts.color = color; this._applyCSS() }
+  setArrowSize(size: number): void { this._opts.arrowSize = size; this._applyCSS() }
+  setRingSize(size: number): void { this._opts.ringSize = size; this._applyCSS() }
+  setRingBorderWidth(width: number): void { this._opts.ringBorderWidth = width; this._applyCSS() }
+  setHideDefaultCursor(hide: boolean): void { this._opts.hideDefaultCursor = hide; this._applyCSS() }
+  setEnableCircle(enable: boolean): void { this._opts.enableCircle = enable; this._applyCSS() }
+  setShadow(shadow: boolean): void { this._opts.shadow = shadow; this._applyCSS() }
+  setClickEffect(clickEffect: boolean): void { this._opts.clickEffect = clickEffect }
   setState(state: CursorState): void { this._setState(state) }
-  setStateManual(state: CursorState): void { this._setState(state) }
-  setLerpFactor(factor: number): void { this._setLerpFactor(factor) }
-  setHideDefaultCursor(hide: boolean): void { this._setHideDefaultCursor(hide) }
-  setEnableCircle(enable: boolean): void { this._setEnableCircle(enable) }
 }
 
-// ─── Module-level factory (for ESM `import { createCursor }`) ─────────────
+// ─── Hover detection ─────────────────────────────────────────────────────────
 
+function detectState(el: Element): CursorState {
+  if (el.matches(TEXT_SELECTOR) || el.closest(TEXT_SELECTOR)) {
+    const input = el.closest('input')
+    if (!input) return 'text'
+    const type = input.getAttribute('type')?.toLowerCase() ?? 'text'
+    return NON_TEXT_INPUT.has(type) ? 'pointer' : 'text'
+  }
+  if (el.closest(POINTER_SELECTOR)) return 'pointer'
+  return 'default'
+}
+
+// ─── Module-level factory ────────────────────────────────────────────────────
+
+/** Alias for `MonoCursor.init()`. */
 export function createCursor(options?: MonoCursorOptions): MonoCursor {
   return MonoCursor.init(options)
 }
 
-// ─── Browser global exposure ───────────────────────────────────────────────
-// In IIFE/IIFE-like environments, expose on globalThis so
-// `<script src="...index.global.js">` gives you `MonoCursor.init(...)`
+export type { MonoCursorOptions, CursorState } from './types'
+export { STYLES } from './styles'
 
-var __mono_cursor_global: any
-if (typeof self !== 'undefined') __mono_cursor_global = self
-else if (typeof window !== 'undefined') __mono_cursor_global = window
-else if (typeof globalThis !== 'undefined') __mono_cursor_global = globalThis
+// ─── Browser global ──────────────────────────────────────────────────────────
+// The IIFE build exposes `MonoCursor` / `createCursor` for `<script>` users.
 
-if (__mono_cursor_global) {
-  __mono_cursor_global.MonoCursor = MonoCursor
-  __mono_cursor_global.createCursor = createCursor
+const _global: any =
+  typeof self !== 'undefined' ? self : typeof globalThis !== 'undefined' ? globalThis : null
+
+if (_global) {
+  _global.MonoCursor = MonoCursor
+  _global.createCursor = createCursor
 }

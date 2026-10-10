@@ -1,117 +1,158 @@
+import { ARROW_TIP, ARROW_VIEWBOX } from './constants'
+
 const STYLE_ID = 'mono-cursor-styles'
+
+// Arrow tip as a fraction of the arrow size — derived from the path data so
+// the SVG stays the single source of truth for where the tip is.
+const TIP_X = (ARROW_TIP.x / ARROW_VIEWBOX).toFixed(6)
+const TIP_Y = (ARROW_TIP.y / ARROW_VIEWBOX).toFixed(6)
+
+const BOX = 'translate(calc(-1 * var(--mc-tip-x)), calc(-1 * var(--mc-tip-y)))'
 
 const styles = `
 :root {
-  --mc-dot-size: 8px;
-  --mc-ring-size: 40px;
-  --mc-ring-border: 1.5px;
   --mc-color: #6366f1;
+  --mc-stroke: #fff;
+  --mc-arrow-size: 26px;
+  --mc-ring-size: 22px;
+  --mc-ring-border: 1.5px;
   --mc-z-index: 999999;
-  --mc-opacity: 1;
+  --mc-ease: cubic-bezier(0.33, 1, 0.68, 1);
+  --mc-tip-x: calc(var(--mc-arrow-size) * ${TIP_X});
+  --mc-tip-y: calc(var(--mc-arrow-size) * ${TIP_Y});
+  --mc-shadow: 0 1px 2px rgba(15, 23, 42, 0.25);
+  --mc-ring-shadow: 0 1px 5px rgba(15, 23, 42, 0.22);
 }
 
+/* Positioned with a single transform written straight from the pointer event
+   (no rAF, no easing, no will-change): the layer stays on the main thread's
+   paint and lands on the same frame as the system pointer. */
 .mc-container {
   position: fixed;
   top: 0;
   left: 0;
-  pointer-events: none;
   z-index: var(--mc-z-index);
+  pointer-events: none;
   opacity: 0;
-  transition: opacity 0.2s ease;
-  will-change: transform;
+  transition: opacity 0.25s ease;
 }
 
-.mc-container.mc-visible {
-  opacity: var(--mc-opacity, 1);
+.mc-container.mc-visible { opacity: 1 }
+
+/* Arrow. transform-origin is the tip, so scaling on hover / press keeps the
+   tip anchored to the pointer instead of drifting. */
+.mc-arrow {
+  display: block;
+  width: var(--mc-arrow-size);
+  height: var(--mc-arrow-size);
+  filter: drop-shadow(var(--mc-shadow));
+  transform-origin: var(--mc-tip-x) var(--mc-tip-y);
+  transform: ${BOX};
+  transition: opacity 0.18s var(--mc-ease), transform 0.18s var(--mc-ease);
 }
 
-.mc-dot {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: var(--mc-dot-size);
-  height: var(--mc-dot-size);
-  background: var(--mc-color);
-  border-radius: 50%;
-  transform: translate(-50%, -50%);
-  transition: width 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
-              height 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
-              background 0.2s ease;
-  box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.4);
+.mc-arrow path {
+  fill: var(--mc-color);
+  stroke: var(--mc-stroke);
+  stroke-width: 2.2;
+  stroke-linejoin: round;
+  paint-order: stroke;
 }
 
+/* Ring / I-beam: centred on the container origin, i.e. it opens up around the
+   arrow tip. */
 .mc-ring {
   position: absolute;
-  top: 50%;
-  left: 50%;
+  top: 0;
+  left: 0;
+  display: block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--mc-color);
+  box-shadow: var(--mc-ring-shadow);
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.4);
+  transition:
+    opacity 0.18s var(--mc-ease),
+    transform 0.18s var(--mc-ease),
+    width 0.18s var(--mc-ease),
+    height 0.18s var(--mc-ease),
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+/* ── States ─────────────────────────────────────────────────────────────── */
+.mc-container[data-state='pointer'] .mc-arrow,
+.mc-container[data-state='text'] .mc-arrow {
+  opacity: 0;
+  transform: ${BOX} scale(0.5);
+}
+
+.mc-container[data-state='pointer'] .mc-ring,
+.mc-container[data-state='text'] .mc-ring {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.mc-container[data-state='pointer'] .mc-ring {
   width: var(--mc-ring-size);
   height: var(--mc-ring-size);
+  background: color-mix(in srgb, var(--mc-color) 12%, transparent);
   border: var(--mc-ring-border) solid var(--mc-color);
-  border-radius: 50%;
-  opacity: 0.7;
-  transform: translate(-50%, -50%);
-  transition: width 0.25s cubic-bezier(0.34, 1.2, 0.64, 1),
-              height 0.25s cubic-bezier(0.34, 1.2, 0.64, 1),
-              opacity 0.2s ease,
-              border-color 0.2s ease,
-              background 0.2s ease;
-  will-change: transform, width, height, opacity;
+  box-shadow: none;
 }
 
-.mc-container[data-state="pointer"] .mc-ring {
-  opacity: 1;
-  background: rgba(99, 102, 241, 0.08);
-  width: calc(var(--mc-ring-size) * 1.2);
-  height: calc(var(--mc-ring-size) * 1.2);
-}
-
-.mc-container[data-state="text"] .mc-ring {
-  opacity: 0.5;
-  border-radius: 2px;
+.mc-container[data-state='text'] .mc-ring {
   width: 2px;
-  height: 22px;
+  height: 20px;
+  border-radius: 1px;
   background: var(--mc-color);
-  border-color: transparent;
+  box-shadow: var(--mc-ring-shadow);
 }
 
-.mc-container[data-state="circle"] .mc-ring {
-  opacity: 1;
-  background: rgba(99, 102, 241, 0.12);
-  width: calc(var(--mc-ring-size) * 1.4);
-  height: calc(var(--mc-ring-size) * 1.4);
-}
+/* ── Shadow: off ────────────────────────────────────────────────────────────
+   Zeroing the properties (rather than making them transparent) also drops the
+   compositing layer the filter would otherwise keep alive on every frame. */
+.mc-container.mc-shadows-off .mc-arrow { filter: none }
+.mc-container.mc-shadows-off .mc-ring { box-shadow: none }
 
-.mc-container.mc-pressed .mc-dot {
-  transform: translate(-50%, -50%) scale(0.7);
+/* ── Press feedback ─────────────────────────────────────────────────────── */
+.mc-container.mc-pressed .mc-arrow {
+  transform: ${BOX} scale(0.88);
+  transition-duration: 0.1s;
 }
-
 .mc-container.mc-pressed .mc-ring {
-  opacity: 0.3 !important;
-  transform: translate(-50%, -50%) scale(0.85);
-  transition: transform 0.1s ease, opacity 0.1s ease;
+  transform: translate(-50%, -50%) scale(0.8);
+  transition-duration: 0.1s;
 }
 
-.mc-container.mc-ring-disabled .mc-ring {
-  display: none;
-}
+/* ── Ring disabled: keep the arrow in every state ───────────────────────── */
+.mc-container.mc-ring-off .mc-ring { display: none }
+.mc-container.mc-ring-off .mc-arrow { opacity: 1; transform: ${BOX} }
 
-.mc-hide-default,
-.mc-hide-default * {
-  cursor: none !important;
-}
+/* ── System pointer ─────────────────────────────────────────────────────── */
+html.has-mc-cursor,
+html.has-mc-cursor * { cursor: none !important }
 
-.mc-dot,
-.mc-ring {
-  transition-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1);
-}
+/* DevTools element-picking (Ctrl+Shift+C) lays its own overlay over the page
+   and swallows pointer events. Hand the native pointer back so the page stays
+   inspectable — the custom cursor stays mounted and keeps tracking. */
+html.has-mc-cursor.devtools-open,
+html.has-mc-cursor.devtools-open * { cursor: default !important }
+
+/* Native scrollbars are composited above every fixed element, so the custom
+   cursor can never cover them. During a scrollbar drag we hand control back
+   rather than leaving the user with no visible pointer at all. */
+html.has-mc-cursor.scrollbar-active,
+html.has-mc-cursor.scrollbar-active * { cursor: auto !important }
+html.has-mc-cursor.scrollbar-active .mc-container { opacity: 0 }
 
 @media (prefers-reduced-motion: reduce) {
-  .mc-dot,
-  .mc-ring,
-  .mc-container {
-    transition: none !important;
-    animation: none !important;
-  }
+  .mc-container,
+  .mc-arrow,
+  .mc-ring { transition: none !important }
 }
 `
 
@@ -124,3 +165,5 @@ export function injectStyles(): void {
   el.textContent = styles.trim()
   ;(document.head || document.documentElement).appendChild(el)
 }
+
+export const STYLES = styles.trim()

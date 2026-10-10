@@ -1,429 +1,438 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { MonoCursor, createCursor } from '../src/index'
+import { MonoCursor, createCursor, STYLES } from '../src/index'
 import { DEFAULT_OPTIONS } from '../src/constants'
+import { setMediaMatches, resetMediaMatches } from './setup'
 
-// ── Minimal DOM setup ──────────────────────────────────────────────────────
+// ── Helpers ────────────────────────────────────────────────────────────────
+
 function setupDOM() {
   document.body.innerHTML = `
     <a id="link" href="#">Link</a>
     <button id="button">Button</button>
     <input id="input" />
+    <input id="range" type="range" />
     <textarea id="textarea"></textarea>
     <div id="div">Div</div>
-    <div id="custom-circle" data-cursor="circle">Custom</div>
-    <div id="custom-pointer" data-cursor="pointer">Custom Pointer</div>
+    <div id="editable" contenteditable="true">Editable</div>
+    <div id="custom-circle" data-cursor="circle">Circle area</div>
+    <div id="custom-text" data-cursor="text">Text area</div>
     <div id="interactive" data-cursor="interactive">Interactive</div>
+    <a href="#" id="anchor"><div id="nested">nested</div></a>
   `
 }
 
-function cleanupDOM() {
-  MonoCursor.destroy()
-  document.body.innerHTML = ''
-}
+const container = () => document.querySelector<HTMLElement>('.mc-container')
+const state = () => container()?.getAttribute('data-state')
 
-// ── Global before/after ────────────────────────────────────────────────────
+const move = (x = 10, y = 20) =>
+  window.dispatchEvent(new MouseEvent('mousemove', { clientX: x, clientY: y }))
+
+const hover = (el: Element) => el.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }))
+
+const html = () => document.documentElement.classList
+
 beforeEach(() => {
   MonoCursor.destroy()
+  // Global options are sticky across instances — normalize them per test.
+  MonoCursor.configure(DEFAULT_OPTIONS)
   setupDOM()
 })
 
 afterEach(() => {
-  cleanupDOM()
+  MonoCursor.destroy()
+  resetMediaMatches()
+  document.body.innerHTML = ''
 })
 
 // ─────────────────────────────────────────────────────────────────────────────
-describe('MonoCursor — static singleton API', () => {
+describe('lifecycle', () => {
+  it('mounts a container with the arrow and ring, and injects styles', () => {
+    MonoCursor.init()
 
-  describe('MonoCursor.init()', () => {
-    it('should create and return the singleton on first call', () => {
-      const cursor = MonoCursor.init({ color: '#ff0000' })
-      const inst = MonoCursor.getInstance()
-      expect(inst).toBe(cursor)
-      expect(document.querySelector('.mc-container')).not.toBeNull()
-    })
-
-    it('should apply passed options', () => {
-      MonoCursor.init({ color: '#abc123', dotSize: 12 })
-      expect(document.documentElement.style.getPropertyValue('--mc-color')).toBe('#abc123')
-      expect(document.documentElement.style.getPropertyValue('--mc-dot-size')).toBe('12px')
-    })
-
-    it('should not re-create on subsequent calls — return same instance', () => {
-      const first = MonoCursor.init()
-      const second = MonoCursor.init()
-      expect(first).toBe(second)
-      const containers = document.querySelectorAll('.mc-container')
-      expect(containers.length).toBe(1)
-    })
-
-    it('should inject styles on first init', () => {
-      MonoCursor.init()
-      expect(document.getElementById('mono-cursor-styles')).not.toBeNull()
-    })
-
-    it('should return the instance for chaining', () => {
-      const result = MonoCursor.init()
-      expect(result).toBe(MonoCursor.getInstance())
-    })
+    expect(container()).not.toBeNull()
+    expect(container()?.querySelector('svg.mc-arrow path')).not.toBeNull()
+    expect(container()?.querySelector('i.mc-ring')).not.toBeNull()
+    expect(document.getElementById('mono-cursor-styles')).not.toBeNull()
   })
 
-  describe('MonoCursor.configure()', () => {
-    it('should update global options and re-apply CSS', () => {
-      MonoCursor.init()
-      MonoCursor.configure({ color: '#deadbeef', ringSize: 80 })
-      expect(document.documentElement.style.getPropertyValue('--mc-color')).toBe('#deadbeef')
-      expect(document.documentElement.style.getPropertyValue('--mc-ring-size')).toBe('80px')
-    })
+  it('does not touch the system cursor until the pointer actually moves', () => {
+    MonoCursor.init()
+    expect(html().contains('has-mc-cursor')).toBe(false)
 
-    it('should not re-initialize — only configure', () => {
-      MonoCursor.init()
-      const before = MonoCursor.getInstance()
-      MonoCursor.configure({ dotSize: 16 })
-      expect(MonoCursor.getInstance()).toBe(before)
-    })
+    move()
+    expect(html().contains('has-mc-cursor')).toBe(true)
   })
 
-  describe('MonoCursor.enable() / MonoCursor.disable()', () => {
-    it('should hide cursor when disabled', () => {
-      MonoCursor.init()
-      MonoCursor.enable()
-      // trigger visibility
-      document.dispatchEvent(new MouseEvent('mousemove', { clientX: 100, clientY: 100 }))
-      expect(document.querySelector('.mc-container')?.classList.contains('mc-visible')).toBe(true)
+  it('reuses the singleton on repeated init calls', () => {
+    const first = MonoCursor.init()
+    const second = MonoCursor.init()
 
-      MonoCursor.disable()
-      expect(document.querySelector('.mc-container')?.classList.contains('mc-visible')).toBe(false)
-      expect(document.body.classList.contains('mc-active')).toBe(false)
-    })
-
-    it('should restore cursor when re-enabled after disable', () => {
-      MonoCursor.init()
-      document.dispatchEvent(new MouseEvent('mousemove', { clientX: 100, clientY: 100 }))
-      MonoCursor.disable()
-      MonoCursor.enable()
-      expect(document.querySelector('.mc-container')?.classList.contains('mc-visible')).toBe(true)
-    })
-
-    it('should not show cursor on mousemove while disabled', () => {
-      MonoCursor.init()
-      MonoCursor.disable()
-      document.dispatchEvent(new MouseEvent('mousemove', { clientX: 100, clientY: 100 }))
-      expect(document.querySelector('.mc-container')?.classList.contains('mc-visible')).toBe(false)
-    })
+    expect(second).toBe(first)
+    expect(document.querySelectorAll('.mc-container').length).toBe(1)
   })
 
-  describe('MonoCursor.destroy()', () => {
-    it('should remove DOM elements and clear instance', () => {
-      MonoCursor.init()
+  it('bails out on coarse pointers and leaves the native cursor alone', () => {
+    setMediaMatches({ '(pointer: fine)': false })
+    MonoCursor.init()
+    move()
+
+    expect(container()).toBeNull()
+    expect(html().contains('has-mc-cursor')).toBe(false)
+  })
+
+  it('bails out when reduced motion is requested', () => {
+    setMediaMatches({ '(prefers-reduced-motion: reduce)': true })
+    MonoCursor.init()
+
+    expect(container()).toBeNull()
+  })
+
+  it('removes everything on destroy', () => {
+    MonoCursor.init()
+    move()
+    MonoCursor.destroy()
+
+    expect(container()).toBeNull()
+    expect(MonoCursor.getInstance()).toBeNull()
+    expect(html().contains('has-mc-cursor')).toBe(false)
+  })
+
+  it('is safe to destroy twice', () => {
+    MonoCursor.init()
+    expect(() => {
       MonoCursor.destroy()
-      expect(document.querySelector('.mc-container')).toBeNull()
-      expect(MonoCursor.getInstance()).toBeNull()
-    })
-
-    it('should be safe to call multiple times', () => {
-      MonoCursor.init()
-      expect(() => { MonoCursor.destroy(); MonoCursor.destroy() }).not.toThrow()
-      expect(MonoCursor.getInstance()).toBeNull()
-    })
-
-    it('should remove mc-active and mc-hide-default classes', () => {
-      MonoCursor.init({ hideDefaultCursor: true })
       MonoCursor.destroy()
-      expect(document.body.classList.contains('mc-active')).toBe(false)
-      expect(document.body.classList.contains('mc-hide-default')).toBe(false)
+    }).not.toThrow()
+  })
+
+  it('only tears down the instance being destroyed', () => {
+    const a = new MonoCursor().init()
+    const b = new MonoCursor().init()
+    expect(document.querySelectorAll('.mc-container').length).toBe(2)
+
+    b.destroy()
+    expect(document.querySelectorAll('.mc-container').length).toBe(1)
+
+    a.destroy()
+    expect(document.querySelectorAll('.mc-container').length).toBe(0)
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
+describe('options', () => {
+  it('applies every option as a CSS variable', () => {
+    MonoCursor.init({
+      color: '#ff0000',
+      arrowSize: 32,
+      ringSize: 48,
+      ringBorderWidth: 2,
+      zIndex: 42,
+    })
+
+    const root = document.documentElement.style
+    expect(root.getPropertyValue('--mc-color')).toBe('#ff0000')
+    expect(root.getPropertyValue('--mc-arrow-size')).toBe('32px')
+    expect(root.getPropertyValue('--mc-ring-size')).toBe('48px')
+    expect(root.getPropertyValue('--mc-ring-border')).toBe('2px')
+    expect(root.getPropertyValue('--mc-z-index')).toBe('42')
+  })
+
+  it('exposes the defaults', () => {
+    expect(DEFAULT_OPTIONS).toEqual({
+      color: '#6366f1',
+      arrowSize: 26,
+      ringSize: 22,
+      ringBorderWidth: 1.5,
+      hideDefaultCursor: true,
+      enableCircle: true,
+      shadow: true,
+      clickEffect: true,
+      zIndex: 999999,
     })
   })
 
-  describe('MonoCursor.setColor()', () => {
-    it('should update the color CSS variable', () => {
-      MonoCursor.init()
-      MonoCursor.setColor('#ff6600')
-      expect(document.documentElement.style.getPropertyValue('--mc-color')).toBe('#ff6600')
-    })
+  it('merges options through configure()', () => {
+    MonoCursor.init()
+    const instance = MonoCursor.getInstance()
+    MonoCursor.configure({ color: '#00ff00', ringSize: 80 })
 
-    it('should be callable before init (no-op, not throw)', () => {
-      MonoCursor.destroy()
-      expect(() => MonoCursor.setColor('#000')).not.toThrow()
-    })
+    expect(MonoCursor.getInstance()).toBe(instance)
+    expect(document.documentElement.style.getPropertyValue('--mc-color')).toBe('#00ff00')
+    expect(document.documentElement.style.getPropertyValue('--mc-ring-size')).toBe('80px')
   })
 
-  describe('MonoCursor.setDotSize()', () => {
-    it('should update the dot-size CSS variable', () => {
-      MonoCursor.init()
-      MonoCursor.setDotSize(16)
-      expect(document.documentElement.style.getPropertyValue('--mc-dot-size')).toBe('16px')
-    })
+  it('accepts options before init', () => {
+    MonoCursor.setRingSize(64)
+    MonoCursor.init()
+    expect(document.documentElement.style.getPropertyValue('--mc-ring-size')).toBe('64px')
   })
 
-  describe('MonoCursor.setRingSize()', () => {
-    it('should update the ring-size CSS variable', () => {
-      MonoCursor.init()
-      MonoCursor.setRingSize(70)
-      expect(document.documentElement.style.getPropertyValue('--mc-ring-size')).toBe('70px')
-    })
-  })
-
-  describe('MonoCursor.setLerpFactor()', () => {
-    it('should clamp to minimum 0.01', () => {
-      MonoCursor.init()
-      MonoCursor.setLerpFactor(-5)
-      expect((MonoCursor.getInstance() as any)._opts.lerpFactor).toBeCloseTo(0.01)
-    })
-
-    it('should clamp to maximum 1', () => {
-      MonoCursor.init()
-      MonoCursor.setLerpFactor(5)
-      expect((MonoCursor.getInstance() as any)._opts.lerpFactor).toBeCloseTo(1)
-    })
-
-    it('should accept valid values', () => {
-      MonoCursor.init()
-      MonoCursor.setLerpFactor(0.5)
-      expect((MonoCursor.getInstance() as any)._opts.lerpFactor).toBeCloseTo(0.5)
-    })
-  })
-
-  describe('MonoCursor.setRingBorderWidth()', () => {
-    it('should update the ring-border CSS variable', () => {
-      MonoCursor.init()
-      MonoCursor.setRingBorderWidth(3)
-      expect(document.documentElement.style.getPropertyValue('--mc-ring-border')).toBe('3px')
-    })
-  })
-
-  describe('MonoCursor.setState()', () => {
-    it('should set the container data-state attribute', () => {
-      MonoCursor.init()
+  it('is a no-op (not a crash) before init', () => {
+    expect(() => {
+      MonoCursor.setColor('#000')
       MonoCursor.setState('pointer')
-      expect(document.querySelector('.mc-container')?.getAttribute('data-state')).toBe('pointer')
-
-      MonoCursor.setState('text')
-      expect(document.querySelector('.mc-container')?.getAttribute('data-state')).toBe('text')
-
-      MonoCursor.setState('circle')
-      expect(document.querySelector('.mc-container')?.getAttribute('data-state')).toBe('circle')
-
-      MonoCursor.setState('default')
-      expect(document.querySelector('.mc-container')?.getAttribute('data-state')).toBe('default')
-    })
+      MonoCursor.enable()
+      MonoCursor.disable()
+    }).not.toThrow()
   })
 
-  describe('MonoCursor.setHideDefaultCursor()', () => {
-    it('should add mc-hide-default class when true', () => {
-      MonoCursor.init()
-      MonoCursor.setHideDefaultCursor(true)
-      expect(document.body.classList.contains('mc-hide-default')).toBe(true)
-    })
+  it('hides the ring instead of the arrow when the circle is disabled', () => {
+    MonoCursor.init({ enableCircle: false })
+    expect(container()?.classList.contains('mc-ring-off')).toBe(true)
 
-    it('should remove mc-hide-default class when false', () => {
-      MonoCursor.init({ hideDefaultCursor: true })
-      MonoCursor.setHideDefaultCursor(false)
-      expect(document.body.classList.contains('mc-hide-default')).toBe(false)
-    })
+    MonoCursor.setEnableCircle(true)
+    expect(container()?.classList.contains('mc-ring-off')).toBe(false)
   })
 
-  describe('MonoCursor.setEnableCircle()', () => {
-    it('should add mc-ring-disabled class when false', () => {
-      MonoCursor.init()
-      MonoCursor.setEnableCircle(false)
-      expect(document.querySelector('.mc-container')?.classList.contains('mc-ring-disabled')).toBe(true)
-    })
+  it('keeps the shadow on by default and drops it on request', () => {
+    MonoCursor.init()
+    expect(container()?.classList.contains('mc-shadows-off')).toBe(false)
 
-    it('should remove mc-ring-disabled class when true', () => {
-      MonoCursor.init({ enableCircle: false })
-      MonoCursor.setEnableCircle(true)
-      expect(document.querySelector('.mc-container')?.classList.contains('mc-ring-disabled')).toBe(false)
-    })
+    MonoCursor.setShadow(false)
+    expect(container()?.classList.contains('mc-shadows-off')).toBe(true)
+
+    MonoCursor.setShadow(true)
+    expect(container()?.classList.contains('mc-shadows-off')).toBe(false)
   })
 
-  describe('MonoCursor.create() — alias for init()', () => {
-    it('should be an alias for init()', () => {
-      const c = MonoCursor.create({ color: '#00ff00' })
-      expect(document.documentElement.style.getPropertyValue('--mc-color')).toBe('#00ff00')
-      expect(c).toBe(MonoCursor.getInstance())
-    })
+  it('can be initialized without a shadow', () => {
+    MonoCursor.init({ shadow: false })
+    expect(container()?.classList.contains('mc-shadows-off')).toBe(true)
   })
 
-  describe('MonoCursor.getInstance()', () => {
-    it('should return null before init', () => {
-      MonoCursor.destroy()
-      expect(MonoCursor.getInstance()).toBeNull()
-    })
+  it('leaves the system cursor alone when hideDefaultCursor is off', () => {
+    MonoCursor.init({ hideDefaultCursor: false })
+    move()
+    expect(html().contains('has-mc-cursor')).toBe(false)
+  })
 
-    it('should return the singleton after init', () => {
-      const c = MonoCursor.init()
-      expect(MonoCursor.getInstance()).toBe(c)
-    })
+  it('drops the system cursor override when toggled off at runtime', () => {
+    MonoCursor.init()
+    move()
+    expect(html().contains('has-mc-cursor')).toBe(true)
+
+    MonoCursor.setHideDefaultCursor(false)
+    expect(html().contains('has-mc-cursor')).toBe(false)
   })
 })
 
 // ─────────────────────────────────────────────────────────────────────────────
-describe('MonoCursor — instance API (non-singleton use)', () => {
-  it('should allow creating multiple independent instances', () => {
+describe('pointer tracking', () => {
+  it('writes the pointer position straight onto the transform', () => {
+    MonoCursor.init()
+    move(300, 400)
+    expect(container()?.style.transform).toBe('translate3d(300px, 400px, 0)')
+  })
+
+  it('follows pointermove as well, for drags', () => {
+    MonoCursor.init()
+    window.dispatchEvent(new PointerEvent('pointermove', { clientX: 5, clientY: 6 }))
+    expect(container()?.style.transform).toBe('translate3d(5px, 6px, 0)')
+  })
+
+  it('shows the cursor on first move and keeps it visible', () => {
+    MonoCursor.init()
+    move()
+    expect(container()?.classList.contains('mc-visible')).toBe(true)
+  })
+
+  it('never hides again — window blur, leave and scroll are ignored', () => {
+    MonoCursor.init()
+    move()
+
+    window.dispatchEvent(new MouseEvent('mouseleave'))
+    window.dispatchEvent(new MouseEvent('blur'))
+    document.dispatchEvent(new MouseEvent('mouseleave'))
+    document.dispatchEvent(new MouseEvent('scroll'))
+    document.dispatchEvent(new Event('visibilitychange'))
+
+    expect(container()?.classList.contains('mc-visible')).toBe(true)
+    expect(html().contains('has-mc-cursor')).toBe(true)
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
+describe('state detection', () => {
+  it.each([
+    ['link', 'pointer'],
+    ['button', 'pointer'],
+    ['interactive', 'pointer'],
+    ['custom-circle', 'pointer'],
+    ['nested', 'pointer'],
+    ['input', 'text'],
+    ['textarea', 'text'],
+    ['editable', 'text'],
+    ['custom-text', 'text'],
+    ['range', 'pointer'],
+    ['div', 'default'],
+  ])('maps #%s to the "%s" state', (id, expected) => {
+    MonoCursor.init()
+    hover(document.getElementById(id)!)
+    expect(state()).toBe(expected)
+  })
+
+  it('updates the state as the pointer crosses elements', () => {
+    MonoCursor.init()
+
+    hover(document.getElementById('link')!)
+    expect(state()).toBe('pointer')
+
+    hover(document.getElementById('input')!)
+    expect(state()).toBe('text')
+
+    hover(document.getElementById('div')!)
+    expect(state()).toBe('default')
+  })
+
+  it('keeps an explicit state until the pointer reaches different content', () => {
+    MonoCursor.init()
+    MonoCursor.setState('pointer')
+    expect(state()).toBe('pointer')
+
+    hover(document.getElementById('div')!)
+    expect(state()).toBe('default')
+  })
+
+  it('ignores non-element targets', () => {
+    MonoCursor.init()
+    hover(document.getElementById('link')!)
+    window.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }))
+    expect(state()).toBe('pointer')
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
+describe('press feedback', () => {
+  it('marks the container while the button is down', () => {
+    MonoCursor.init()
+
+    window.dispatchEvent(new PointerEvent('pointerdown'))
+    expect(container()?.classList.contains('mc-pressed')).toBe(true)
+
+    window.dispatchEvent(new PointerEvent('pointerup'))
+    expect(container()?.classList.contains('mc-pressed')).toBe(false)
+  })
+
+  it('clears the pressed state on mouseup too', () => {
+    MonoCursor.init()
+    window.dispatchEvent(new PointerEvent('pointerdown'))
+    window.dispatchEvent(new MouseEvent('mouseup'))
+    expect(container()?.classList.contains('mc-pressed')).toBe(false)
+  })
+
+  it('can be switched off', () => {
+    MonoCursor.init({ clickEffect: false })
+    window.dispatchEvent(new PointerEvent('pointerdown'))
+    expect(container()?.classList.contains('mc-pressed')).toBe(false)
+  })
+
+  it('releases the pointer over a scrollbar trough instead of pressing', () => {
+    MonoCursor.init()
+
+    // jsdom reports a zero-sized viewport, so any positive clientX is
+    // "outside the content box" — i.e. over the scrollbar.
+    window.dispatchEvent(new PointerEvent('pointerdown', { clientX: 100, clientY: 100 }))
+    expect(html().contains('scrollbar-active')).toBe(true)
+    expect(container()?.classList.contains('mc-pressed')).toBe(false)
+
+    window.dispatchEvent(new PointerEvent('pointerup'))
+    expect(html().contains('scrollbar-active')).toBe(false)
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
+describe('devtools', () => {
+  it('releases the native pointer when the viewport shrinks past the threshold', () => {
+    Object.defineProperty(window, 'outerWidth', { value: 1200, configurable: true })
+    Object.defineProperty(window, 'innerWidth', { value: 900, configurable: true })
+
+    MonoCursor.init()
+    window.dispatchEvent(new Event('resize'))
+
+    expect(html().contains('devtools-open')).toBe(true)
+
+    Object.defineProperty(window, 'innerWidth', { value: 1200, configurable: true })
+    window.dispatchEvent(new Event('resize'))
+    expect(html().contains('devtools-open')).toBe(false)
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
+describe('enable / disable', () => {
+  it('pauses tracking and hands the native cursor back', () => {
+    MonoCursor.init()
+    move()
+    MonoCursor.disable()
+
+    expect(container()?.classList.contains('mc-visible')).toBe(false)
+    expect(html().contains('has-mc-cursor')).toBe(false)
+  })
+
+  it('ignores moves while disabled', () => {
+    MonoCursor.init()
+    MonoCursor.disable()
+    move()
+    expect(container()?.classList.contains('mc-visible')).toBe(false)
+  })
+
+  it('restores the cursor on enable', () => {
+    MonoCursor.init()
+    move()
+    MonoCursor.disable()
+    MonoCursor.enable()
+
+    expect(container()?.classList.contains('mc-visible')).toBe(true)
+    expect(html().contains('has-mc-cursor')).toBe(true)
+  })
+
+  it('stays hidden on enable if it was never shown', () => {
+    MonoCursor.init()
+    MonoCursor.enable()
+    expect(container()?.classList.contains('mc-visible')).toBe(false)
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
+describe('instance API', () => {
+  it('supports independent instances', () => {
     const a = new MonoCursor({ color: '#111' })
     const b = new MonoCursor({ color: '#222' })
-
     a.init()
     b.init()
 
-    // Both should exist in DOM
-    const all = document.querySelectorAll('.mc-container')
-    expect(all.length).toBe(2)
+    expect(document.querySelectorAll('.mc-container').length).toBe(2)
 
     a.destroy()
     b.destroy()
   })
 
-  it('should allow calling instance methods after init', () => {
-    const cursor = new MonoCursor({ color: '#aaa' }).init()
-    cursor.setColor('#bbb')
-    expect(document.documentElement.style.getPropertyValue('--mc-color')).toBe('#bbb')
-    cursor.destroy()
+  it('applies setters on an instance', () => {
+    const cursor = new MonoCursor().init()
+    cursor.setColor('#abcdef')
+    cursor.setArrowSize(40)
+    cursor.setState('text')
+
+    expect(document.documentElement.style.getPropertyValue('--mc-color')).toBe('#abcdef')
+    expect(document.documentElement.style.getPropertyValue('--mc-arrow-size')).toBe('40px')
+    expect(state()).toBe('text')
   })
 })
 
 // ─────────────────────────────────────────────────────────────────────────────
-describe('createCursor factory', () => {
-  it('should init the singleton via the module export', () => {
-    setupDOM()
+describe('createCursor', () => {
+  it('is an alias for init', () => {
     const cursor = createCursor({ color: '#c0ffee' })
-    expect(document.documentElement.style.getPropertyValue('--mc-color')).toBe('#c0ffee')
     expect(cursor).toBe(MonoCursor.getInstance())
-    cleanupDOM()
+    expect(document.documentElement.style.getPropertyValue('--mc-color')).toBe('#c0ffee')
   })
 })
 
 // ─────────────────────────────────────────────────────────────────────────────
-describe('DEFAULT_OPTIONS', () => {
-  it('should have all expected default values', () => {
-    expect(DEFAULT_OPTIONS.color).toBe('#6366f1')
-    expect(DEFAULT_OPTIONS.dotSize).toBe(8)
-    expect(DEFAULT_OPTIONS.ringSize).toBe(40)
-    expect(DEFAULT_OPTIONS.ringBorderWidth).toBe(1.5)
-    expect(DEFAULT_OPTIONS.lerpFactor).toBe(0.15)
-    expect(DEFAULT_OPTIONS.hideDefaultCursor).toBe(true)
-    expect(DEFAULT_OPTIONS.enableCircle).toBe(true)
-    expect(DEFAULT_OPTIONS.zIndex).toBe(999999)
-  })
-})
-
-// ─────────────────────────────────────────────────────────────────────────────
-describe('Cursor type detection', () => {
-  it('should detect pointer on <a>', () => {
-    MonoCursor.init()
-    const type = (MonoCursor.getInstance() as any)._detectCursorType(document.getElementById('link'))
-    expect(type).toBe('pointer')
-  })
-
-  it('should detect pointer on <button>', () => {
-    MonoCursor.init()
-    const type = (MonoCursor.getInstance() as any)._detectCursorType(document.getElementById('button'))
-    expect(type).toBe('pointer')
-  })
-
-  it('should detect text on <input>', () => {
-    MonoCursor.init()
-    const type = (MonoCursor.getInstance() as any)._detectCursorType(document.getElementById('input'))
-    expect(type).toBe('text')
-  })
-
-  it('should detect text on <textarea>', () => {
-    MonoCursor.init()
-    const type = (MonoCursor.getInstance() as any)._detectCursorType(document.getElementById('textarea'))
-    expect(type).toBe('text')
-  })
-
-  it('should detect circle from data-cursor="circle"', () => {
-    MonoCursor.init()
-    const type = (MonoCursor.getInstance() as any)._detectCursorType(document.getElementById('custom-circle'))
-    expect(type).toBe('circle')
-  })
-
-  it('should detect pointer from data-cursor="pointer"', () => {
-    MonoCursor.init()
-    const type = (MonoCursor.getInstance() as any)._detectCursorType(document.getElementById('custom-pointer'))
-    expect(type).toBe('pointer')
-  })
-
-  it('should detect pointer from data-cursor="interactive"', () => {
-    MonoCursor.init()
-    const type = (MonoCursor.getInstance() as any)._detectCursorType(document.getElementById('interactive'))
-    expect(type).toBe('pointer')
-  })
-
-  it('should return default for plain div', () => {
-    MonoCursor.init()
-    const type = (MonoCursor.getInstance() as any)._detectCursorType(document.getElementById('div'))
-    expect(type).toBe('default')
-  })
-
-  it('should detect pointer when nested inside an anchor', () => {
-    document.body.innerHTML = `<a href="#"><div id="nested">link</div></a>`
-    MonoCursor.init()
-    const type = (MonoCursor.getInstance() as any)._detectCursorType(document.getElementById('nested'))
-    expect(type).toBe('pointer')
-  })
-
-  it('should ignore input type=range (pointer, not text)', () => {
-    document.body.innerHTML = `<input type="range" id="range-input">`
-    MonoCursor.init()
-    const type = (MonoCursor.getInstance() as any)._detectCursorType(document.getElementById('range-input'))
-    expect(type).toBe('pointer')
-  })
-})
-
-// ─────────────────────────────────────────────────────────────────────────────
-describe('Mouse / pointer event handling', () => {
-  it('should update target on mousemove', () => {
-    MonoCursor.init()
-    document.dispatchEvent(new MouseEvent('mousemove', { clientX: 300, clientY: 400 }))
-    const inst = MonoCursor.getInstance() as any
-    expect(inst._target.x).toBe(300)
-    expect(inst._target.y).toBe(400)
-  })
-
-  it('should show cursor on first mousemove', () => {
-    MonoCursor.init()
-    // Cursor starts hidden — first mousemove should show it
-    document.dispatchEvent(new MouseEvent('mousemove', { clientX: 100, clientY: 100 }))
-    expect(document.querySelector('.mc-container')?.classList.contains('mc-visible')).toBe(true)
-  })
-
-  it('should change state on mouseover of interactive element', () => {
-    MonoCursor.init()
-    const link = document.getElementById('link')
-    // jsdom doesn't set target via constructor — simulate via element.dispatchEvent
-    const overEvent = new MouseEvent('mouseover', { bubbles: true })
-    Object.defineProperty(overEvent, 'target', { value: link, configurable: true })
-    document.dispatchEvent(overEvent)
-    expect(document.querySelector('.mc-container')?.getAttribute('data-state')).toBe('pointer')
-  })
-
-  it('should hide on document mouseleave', () => {
-    MonoCursor.init()
-    document.dispatchEvent(new MouseEvent('mouseleave'))
-    expect(document.querySelector('.mc-container')?.classList.contains('mc-visible')).toBe(false)
-  })
-
-  it('should add mc-pressed on pointerdown', () => {
-    MonoCursor.init()
-    document.dispatchEvent(new PointerEvent('pointerdown'))
-    expect(document.querySelector('.mc-container')?.classList.contains('mc-pressed')).toBe(true)
-  })
-
-  it('should remove mc-pressed on pointerup', () => {
-    MonoCursor.init()
-    document.dispatchEvent(new PointerEvent('pointerdown'))
-    document.dispatchEvent(new PointerEvent('pointerup'))
-    expect(document.querySelector('.mc-container')?.classList.contains('mc-pressed')).toBe(false)
-  })
-
-  it('should reset position on scroll', () => {
-    MonoCursor.init()
-    document.dispatchEvent(new MouseEvent('mousemove', { clientX: 100, clientY: 100 }))
-    document.dispatchEvent(new MouseEvent('scroll'))
-    const inst = MonoCursor.getInstance() as any
-    expect(inst._target.x).toBe(-1000)
-    expect(inst._target.y).toBe(-1000)
+describe('STYLES', () => {
+  it('ships the arrow tip pinning and the system-cursor overrides', () => {
+    expect(STYLES).toContain('.mc-arrow')
+    expect(STYLES).toContain('paint-order: stroke')
+    expect(STYLES).toContain('html.has-mc-cursor *')
+    expect(STYLES).toContain('prefers-reduced-motion')
   })
 })

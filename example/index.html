@@ -1,937 +1,266 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark" data-lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>MonoCursor — Custom Cursor System</title>
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='16' r='6' fill='%236366f1'/><circle cx='16' cy='16' r='12' fill='none' stroke='%236366f1' stroke-width='2' opacity='0.4'/></svg>">
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-    :root {
-      --bg: #0d0d0f;
-      --surface: #111114;
-      --surface2: #18181c;
-      --border: #22222a;
-      --border2: #2e2e38;
-      --text: #ededef;
-      --text2: #9898a4;
-      --text3: #55555f;
-      --accent: #6366f1;
-      --accent-dim: rgba(99, 102, 241, 0.15);
-      --accent-ring: rgba(99, 102, 241, 0.25);
-      --radius: 8px;
-      --sidebar-w: 300px;
-      --top-h: 52px;
-      --font: 'Segoe UI', system-ui, -apple-system, sans-serif;
-    }
-
-    html, body {
-      height: 100%;
-      overflow: hidden;
-      background: var(--bg);
-      color: var(--text);
-      font-family: var(--font);
-      font-size: 14px;
-      line-height: 1.5;
-      -webkit-font-smoothing: antialiased;
-    }
-
-    /* ── Layout ───────────────────────────────────────── */
-    .app {
-      display: grid;
-      grid-template-columns: var(--sidebar-w) 1fr;
-      height: 100vh;
-    }
-
-    /* ── Header bar ────────────────────────────────────── */
-    .header {
-      grid-column: 1 / -1;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0 24px;
-      height: var(--top-h);
-      border-bottom: 1px solid var(--border);
-      background: var(--surface);
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      z-index: 100;
-    }
-
-    .header-logo {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .header-logo svg { flex-shrink: 0; }
-
-    .header-name {
-      font-size: 14px;
-      font-weight: 600;
-      letter-spacing: -0.01em;
-    }
-
-    .header-ver {
-      font-size: 11px;
-      color: var(--text3);
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      padding: 1px 7px;
-      border-radius: 20px;
-    }
-
-    /* ── Lang toggle ───────────────────────────────────── */
-    .lang-toggle {
-      display: flex;
-      align-items: center;
-      gap: 1px;
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 2px;
-    }
-
-    .lang-btn {
-      background: none;
-      border: none;
-      color: var(--text3);
-      font-size: 12px;
-      font-weight: 500;
-      font-family: var(--font);
-      padding: 3px 10px;
-      border-radius: 4px;
-      cursor: pointer;
-      transition: color 0.15s, background 0.15s;
-    }
-
-    .lang-btn.active {
-      background: var(--accent);
-      color: #fff;
-    }
-
-    .lang-btn:not(.active):hover {
-      color: var(--text2);
-    }
-
-    /* ── Sidebar ───────────────────────────────────────── */
-    .sidebar {
-      margin-top: var(--top-h);
-      height: calc(100vh - var(--top-h));
-      overflow-y: auto;
-      background: var(--surface);
-      border-right: 1px solid var(--border);
-      padding: 20px 16px;
-      display: flex;
-      flex-direction: column;
-      gap: 20px;
-    }
-
-    .sidebar::-webkit-scrollbar { width: 3px; }
-    .sidebar::-webkit-scrollbar-track { background: transparent; }
-    .sidebar::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
-
-    .sidebar-section { display: flex; flex-direction: column; gap: 10px; }
-
-    .section-title {
-      font-size: 10px;
-      font-weight: 700;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      color: var(--text3);
-      padding-bottom: 4px;
-    }
-
-    /* ── Controls ─────────────────────────────────────── */
-    .ctrl {
-      display: flex;
-      flex-direction: column;
-      gap: 5px;
-    }
-
-    .ctrl-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .ctrl-label { font-size: 12px; color: var(--text2); }
-
-    .ctrl-val {
-      font-size: 11px;
-      color: var(--text);
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      padding: 1px 6px;
-      border-radius: 4px;
-      font-variant-numeric: tabular-nums;
-      min-width: 36px;
-      text-align: center;
-    }
-
-    input[type="range"] {
-      -webkit-appearance: none;
-      width: 100%;
-      height: 3px;
-      background: var(--border2);
-      border-radius: 2px;
-      outline: none;
-      cursor: pointer;
-    }
-
-    input[type="range"]::-webkit-slider-thumb {
-      -webkit-appearance: none;
-      width: 12px;
-      height: 12px;
-      border-radius: 50%;
-      background: var(--accent);
-      border: 2px solid var(--surface);
-      box-shadow: 0 0 0 1px var(--accent-ring);
-      cursor: pointer;
-      transition: transform 0.1s;
-    }
-
-    input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.15); }
-
-    input[type="range"]::-moz-range-thumb {
-      width: 12px;
-      height: 12px;
-      border-radius: 50%;
-      background: var(--accent);
-      border: 2px solid var(--surface);
-      cursor: pointer;
-    }
-
-    /* ── Color ─────────────────────────────────────────── */
-    .color-row { display: flex; align-items: center; gap: 8px; }
-
-    .color-pick {
-      width: 28px;
-      height: 28px;
-      border-radius: 6px;
-      border: 1px solid var(--border2);
-      cursor: pointer;
-      position: relative;
-      overflow: hidden;
-      flex-shrink: 0;
-    }
-
-    .color-pick input[type="color"] {
-      position: absolute;
-      inset: -4px;
-      width: calc(100% + 8px);
-      height: calc(100% + 8px);
-      border: none;
-      cursor: pointer;
-      opacity: 0;
-    }
-
-    .color-preview {
-      width: 100%;
-      height: 100%;
-      border-radius: 5px;
-      transition: background 0.2s;
-    }
-
-    .presets { display: flex; flex-wrap: wrap; gap: 5px; }
-
-    .preset {
-      width: 18px;
-      height: 18px;
-      border-radius: 4px;
-      border: 1px solid transparent;
-      cursor: pointer;
-      transition: transform 0.1s, border-color 0.1s;
-    }
-
-    .preset:hover { transform: scale(1.2); border-color: rgba(255,255,255,0.25); }
-
-    /* ── Toggles ───────────────────────────────────────── */
-    .toggle-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-
-    .toggle-label { font-size: 12px; color: var(--text2); }
-
-    .toggle {
-      position: relative;
-      width: 32px;
-      height: 18px;
-      flex-shrink: 0;
-    }
-
-    .toggle input { opacity: 0; width: 0; height: 0; }
-
-    .toggle-track {
-      position: absolute;
-      inset: 0;
-      background: var(--border2);
-      border-radius: 9px;
-      cursor: pointer;
-      transition: background 0.2s;
-    }
-
-    .toggle-thumb {
-      position: absolute;
-      top: 2px;
-      left: 2px;
-      width: 14px;
-      height: 14px;
-      background: var(--text3);
-      border-radius: 50%;
-      transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.2s;
-      pointer-events: none;
-    }
-
-    .toggle input:checked + .toggle-track { background: var(--accent); }
-    .toggle input:checked + .toggle-track .toggle-thumb {
-      transform: translateX(14px);
-      background: #fff;
-    }
-
-    /* ── State buttons ──────────────────────────────────── */
-    .state-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
-
-    .state-btn {
-      padding: 6px 8px;
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      color: var(--text2);
-      font-size: 12px;
-      font-weight: 500;
-      font-family: var(--font);
-      cursor: pointer;
-      transition: border-color 0.15s, color 0.15s, background 0.15s;
-      text-align: center;
-    }
-
-    .state-btn:hover { border-color: var(--border2); color: var(--text); }
-    .state-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
-
-    .divider { height: 1px; background: var(--border); }
-
-    /* ── Sidebar footer ─────────────────────────────────── */
-    .sidebar-footer { margin-top: auto; padding-top: 16px; }
-
-    .sidebar-footer-label {
-      font-size: 10px;
-      font-weight: 700;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      color: var(--text3);
-      margin-bottom: 8px;
-    }
-
-    .hover-hint {
-      font-size: 11px;
-      color: var(--text3);
-      line-height: 1.6;
-    }
-
-    .hover-hint span { color: var(--accent); }
-
-    /* ── Main ───────────────────────────────────────────── */
-    .main {
-      margin-top: var(--top-h);
-      height: calc(100vh - var(--top-h));
-      overflow-y: auto;
-      padding: 48px 64px;
-    }
-
-    .main::-webkit-scrollbar { width: 4px; }
-    .main::-webkit-scrollbar-track { background: transparent; }
-    .main::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
-
-    /* ── Hero ──────────────────────────────────────────── */
-    .hero { margin-bottom: 48px; }
-
-    .hero-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 5px;
-      font-size: 11px;
-      font-weight: 600;
-      color: var(--accent);
-      background: var(--accent-dim);
-      border: 1px solid rgba(99,102,241,0.2);
-      padding: 3px 10px;
-      border-radius: 20px;
-      margin-bottom: 16px;
-      letter-spacing: 0.02em;
-    }
-
-    .hero h1 {
-      font-size: 42px;
-      font-weight: 700;
-      letter-spacing: -0.03em;
-      line-height: 1.1;
-      margin-bottom: 14px;
-    }
-
-    .hero-desc {
-      font-size: 15px;
-      color: var(--text2);
-      line-height: 1.65;
-    }
-
-    /* ── Section ───────────────────────────────────────── */
-    .section { margin-bottom: 40px; }
-
-    .section-title {
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      color: var(--text3);
-      margin-bottom: 16px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .section-title::after {
-      content: '';
-      flex: 1;
-      height: 1px;
-      background: var(--border);
-    }
-
-    /* ── Effect cards ───────────────────────────────────── */
-    .effect-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-      gap: 10px;
-    }
-
-    .effect-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 20px;
-      transition: border-color 0.2s;
-      position: relative;
-    }
-
-    .effect-card:hover { border-color: var(--border2); }
-
-    .effect-card-title {
-      font-size: 13px;
-      font-weight: 600;
-      color: var(--text);
-      margin-bottom: 4px;
-    }
-
-    .effect-card-desc {
-      font-size: 12px;
-      color: var(--text3);
-      margin-bottom: 16px;
-    }
-
-    .effect-preview {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      min-height: 40px;
-    }
-
-    /* ── Code blocks ────────────────────────────────────── */
-    .code-block {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      overflow: hidden;
-      margin-bottom: 12px;
-    }
-
-    .code-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 10px 14px;
-      border-bottom: 1px solid var(--border);
-    }
-
-    .code-title { font-size: 11px; color: var(--text3); }
-
-    .code-lang { font-size: 10px; color: var(--text3); background: var(--surface2); padding: 2px 7px; border-radius: 4px; }
-
-    .code-body { padding: 14px 16px; }
-
-    pre {
-      font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
-      font-size: 12.5px;
-      line-height: 1.75;
-      white-space: pre;
-      overflow-x: auto;
-    }
-
-    pre::-webkit-scrollbar { height: 3px; }
-    pre::-webkit-scrollbar-thumb { background: var(--border2); }
-
-    /* Syntax highlight */
-    .k { color: #c084fc; }
-    .f { color: #60a5fa; }
-    .s { color: #34d399; }
-    .n { color: #f87171; }
-    .c { color: #55555f; }
-    .t { color: #a5b4fc; }
-
-    /* ── Interactive elements in preview ─────────────────── */
-    .ex-link { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; cursor: pointer; font-size: 12px; }
-    .ex-btn { display: inline-flex; align-items: center; gap: 5px; background: var(--surface2); border: 1px solid var(--border2); border-radius: 6px; padding: 5px 10px; font-size: 12px; font-family: var(--font); color: var(--text); cursor: pointer; transition: border-color 0.15s; }
-    .ex-btn:hover { border-color: var(--accent); }
-    .ex-input { background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; padding: 5px 10px; font-size: 12px; color: var(--text); font-family: var(--font); outline: none; transition: border-color 0.15s; width: 100%; }
-    .ex-input:focus { border-color: var(--accent); }
-
-    /* ── i18n ───────────────────────────────────────────── */
-    [langen] { display: inline; }
-    [langzh] { display: none; }
-    html.zh [langen] { display: none; }
-    html.zh [langzh] { display: inline; }
-
-    /* ── Reduced motion ─────────────────────────────────── */
-    @media (prefers-reduced-motion: reduce) {
-      * { transition: none !important; animation: none !important; }
-    }
-  </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>mono-cursor — a cursor that knows what it's pointing at</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M5.5 3.2 L18.8 11.4 L12.6 12.8 L9.9 19.6 Z' fill='%236366f1' stroke='%23fff' stroke-width='1.6' stroke-linejoin='round' paint-order='stroke'/></svg>">
+
+<!-- Theme and language are decided before the first paint, so the page never
+     flashes the wrong one. The IP check below only refines the language. -->
+<script>
+(function () {
+  var root = document.documentElement;
+  var theme = null, lang = null;
+  try {
+    theme = localStorage.getItem('mono-cursor-theme');
+    lang = localStorage.getItem('mono-cursor-lang');
+  } catch (error) { /* storage blocked — fall through to the OS defaults */ }
+
+  root.dataset.theme = theme ||
+    (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+
+  if (lang !== 'en' && lang !== 'zh') {
+    lang = ((navigator.language || 'en').toLowerCase().indexOf('zh') === 0) ? 'zh' : 'en';
+  }
+  root.dataset.lang = lang;
+  root.lang = lang === 'zh' ? 'zh-CN' : 'en';
+})();
+</script>
+
+<link rel="stylesheet" href="app.css">
 </head>
 <body>
-  <!-- ── Header ──────────────────────────────────────── -->
-  <header class="header">
-    <div class="header-logo">
-      <svg width="20" height="20" viewBox="0 0 32 32" fill="none">
-        <circle cx="16" cy="16" r="5" fill="#6366f1"/>
-        <circle cx="16" cy="16" r="11" fill="none" stroke="#6366f1" stroke-width="1.5" opacity="0.4"/>
-      </svg>
-      <span class="header-name">mono-cursor</span>
-      <span class="header-ver">v1.0.0</span>
+<div class="page">
+
+  <header class="masthead">
+    <div class="brand">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5.5 3.2 L18.8 11.4 L12.6 12.8 L9.9 19.6 Z"/></svg>
+      <span>mono-cursor</span>
+      <span class="brand-sep" aria-hidden="true">|</span>
+      <a class="author-link" href="https://www.monokelvin.cn" target="_blank" rel="noreferrer noopener">by MonoKelvin</a>
     </div>
 
-    <div class="lang-toggle">
-      <button class="lang-btn active" id="lang-en">EN</button>
-      <button class="lang-btn" id="lang-zh">中文</button>
+    <div class="tools">
+      <div class="seg" role="group" aria-label="Language">
+        <button class="seg-btn" type="button" data-lang-btn="en" aria-pressed="true">EN</button>
+        <button class="seg-btn" type="button" data-lang-btn="zh" aria-pressed="false">中文</button>
+      </div>
+
+      <a class="icon-btn" href="https://github.com/MonoKelvin/mono-cursor" target="_blank" rel="noreferrer noopener" aria-label="Source on GitHub">
+        <svg class="icon-github" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 .5C5.7.5.5 5.7.5 12c0 5.1 3.3 9.4 7.9 10.9.6.1.8-.3.8-.6v-2c-3.2.7-3.9-1.5-3.9-1.5-.5-1.3-1.3-1.7-1.3-1.7-1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.7 1.3 3.4 1 .1-.8.4-1.3.7-1.6-2.6-.3-5.3-1.3-5.3-5.8 0-1.3.5-2.3 1.2-3.1-.1-.3-.5-1.5.1-3.1 0 0 1-.3 3.3 1.2a11.5 11.5 0 0 1 6 0c2.3-1.5 3.3-1.2 3.3-1.2.6 1.6.2 2.8.1 3.1.8.8 1.2 1.8 1.2 3.1 0 4.5-2.7 5.5-5.3 5.8.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6 4.6-1.5 7.9-5.8 7.9-10.9C23.5 5.7 18.3.5 12 .5z"/></svg>
+      </a>
+
+      <!-- Not on npm yet — swap in the real package page once it is published. -->
+      <a class="icon-btn" href="https://www.npmjs.com/package/mono-cursor" target="_blank" rel="noreferrer noopener" aria-label="Package on npm">
+        <svg class="icon-npm" viewBox="0 0 24 24" aria-hidden="true"><path d="M1.76 0C.79 0 0 .79 0 1.76v20.48C0 23.21.79 24 1.76 24h20.48c.97 0 1.76-.79 1.76-1.76V1.76C24 .79 23.21 0 22.24 0H1.76zm3.37 5.32l13.84.02-.01 13.84h-3.46l.01-10.38h-3.46l.01 10.38H5.11l.02-13.86z"/></svg>
+      </a>
+
+      <button class="icon-btn" type="button" id="theme" aria-label="Toggle colour theme">
+        <svg class="icon-sun" viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="12" cy="12" r="4.2"/>
+          <path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M18.7 5.3l-1.6 1.6M6.9 17.1l-1.6 1.6"/>
+        </svg>
+        <svg class="icon-moon" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M20 14.2A8.2 8.2 0 0 1 9.8 4a8.5 8.5 0 1 0 10.2 10.2z"/>
+        </svg>
+      </button>
     </div>
   </header>
 
-  <!-- ── App ───────────────────────────────────────────── -->
-  <div class="app">
+  <p class="warn">example/mono-cursor.global.js is missing — run <strong>npm run build</strong> in the project root, then reload.</p>
 
-    <!-- ── Sidebar ───────────────────────────────────── -->
-    <aside class="sidebar">
+  <section class="hero">
+    <div class="hero-copy">
+      <h1 data-i18n="h1"></h1>
+      <p class="lede" data-i18n="lede"></p>
+      <button class="install" type="button" id="install">
+        <span class="prompt">$</span>
+        <span>npm i mono-cursor</span>
+        <span class="action" id="install-action"></span>
+      </button>
+    </div>
 
-      <!-- Appearance -->
-      <div class="sidebar-section">
-        <div class="section-title langen">Appearance</div>
-        <div class="section-title" langzh>外观</div>
-
-        <div class="ctrl">
-          <div class="ctrl-row">
-            <span class="ctrl-label langen">Color</span>
-            <span class="ctrl-label" langzh>颜色</span>
-            <span class="ctrl-val" id="v-color">#6366f1</span>
-          </div>
-          <div class="color-row">
-            <div class="color-pick">
-              <div class="color-preview" id="color-preview" style="background:#6366f1;"></div>
-              <input type="color" id="color-picker" value="#6366f1">
-            </div>
-            <div class="presets" id="presets"></div>
-          </div>
+    <div class="hero-art" aria-hidden="true">
+      <!-- One looping story: the cursor glides in as an arrow, types
+           "mono-cursor" into the field as an I-beam, moves to the heart
+           button as a ring, clicks, and the hollow heart fills red. -->
+      <div class="art-ui">
+        <div class="art-field"><span class="art-typed">mono-cursor</span></div>
+        <button class="art-heart" type="button" tabindex="-1">
+          <svg class="heart heart-hollow" viewBox="0 0 24 24"><path d="M12 20.3l-1.4-1.3C5.9 14.7 3 12 3 8.6 3 6 5 4 7.5 4c1.6 0 3.1.8 4 2 .9-1.2 2.4-2 4-2C22 4 24 6 24 8.6c0 3.4-2.9 6.1-7.6 10.4L12 20.3z" transform="translate(-1.5 0)"/></svg>
+          <svg class="heart heart-solid" viewBox="0 0 24 24"><path d="M12 20.3l-1.4-1.3C5.9 14.7 3 12 3 8.6 3 6 5 4 7.5 4c1.6 0 3.1.8 4 2 .9-1.2 2.4-2 4-2C22 4 24 6 24 8.6c0 3.4-2.9 6.1-7.6 10.4L12 20.3z" transform="translate(-1.5 0)"/></svg>
+        </button>
+        <div class="art-cursor">
+          <svg class="art-arrow" viewBox="0 0 24 24"><path d="M5.5 3.2 L18.8 11.4 L12.6 12.8 L9.9 19.6 Z"/></svg>
+          <span class="art-ring"></span>
+          <span class="art-bar"></span>
         </div>
+      </div>
+    </div>
+  </section>
 
-        <div class="ctrl">
-          <div class="ctrl-row">
-            <span class="ctrl-label langen">Dot Size</span>
-            <span class="ctrl-label" langzh>圆点大小</span>
-            <span class="ctrl-val" id="v-dotSize">8</span>
-          </div>
-          <input type="range" id="dotSize" min="2" max="24" value="8" step="1">
-        </div>
+  <!-- ── The three states, live ─────────────────────────────────────────── -->
+  <section class="stage">
+    <div class="zone">
+      <p class="zone-label" data-i18n="zoneArrow"></p>
+      <p class="zone-hint" data-i18n="zoneArrowHint"></p>
+      <p class="zone-prose" data-i18n="zoneArrowProse"></p>
+    </div>
 
-        <div class="ctrl">
-          <div class="ctrl-row">
-            <span class="ctrl-label langen">Ring Size</span>
-            <span class="ctrl-label" langzh>圆圈大小</span>
-            <span class="ctrl-val" id="v-ringSize">40</span>
-          </div>
-          <input type="range" id="ringSize" min="20" max="100" value="40" step="1">
-        </div>
+    <div class="zone">
+      <p class="zone-label" data-i18n="zoneRing"></p>
+      <p class="zone-hint" data-i18n="zoneRingHint"></p>
+      <div class="zone-demo">
+        <a class="demo-link" href="#" data-i18n="demoLink"></a>
+        <button class="demo-btn" type="button" data-i18n="demoButton"></button>
+      </div>
+    </div>
 
-        <div class="ctrl">
-          <div class="ctrl-row">
-            <span class="ctrl-label langen">Ring Border</span>
-            <span class="ctrl-label" langzh>圆圈边框</span>
-            <span class="ctrl-val" id="v-ringBorder">1.5</span>
-          </div>
-          <input type="range" id="ringBorder" min="0.5" max="6" value="1.5" step="0.5">
+    <div class="zone">
+      <p class="zone-label" data-i18n="zoneText"></p>
+      <p class="zone-hint" data-i18n="zoneTextHint"></p>
+      <div class="zone-demo">
+        <input class="demo-input" type="text" data-i18n-placeholder="demoPlaceholder">
+        <input class="demo-input" type="text" data-i18n-placeholder="demoPlaceholder2">
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Playground ─────────────────────────────────────────────────────── -->
+  <section class="panel">
+    <div class="aside">
+      <h2 data-i18n="playgroundTitle"></h2>
+      <p data-i18n="playgroundBody"></p>
+    </div>
+
+    <div class="rows">
+      <div class="row">
+        <span class="key" id="k-colour" data-i18n="ctrlColour"></span>
+        <div class="colour">
+          <input class="swatch-input" type="color" id="colour" value="#6366f1" aria-labelledby="k-colour">
+          <div class="presets" id="presets"></div>
         </div>
       </div>
 
-      <div class="divider"></div>
-
-      <!-- Animation -->
-      <div class="sidebar-section">
-        <div class="section-title langen">Animation</div>
-        <div class="section-title" langzh>动画</div>
-
-        <div class="ctrl">
-          <div class="ctrl-row">
-            <span class="ctrl-label langen">Smoothness</span>
-            <span class="ctrl-label" langzh>平滑度</span>
-            <span class="ctrl-val" id="v-lerp">0.15</span>
-          </div>
-          <input type="range" id="lerp" min="0.01" max="1" value="0.15" step="0.01">
-          <div style="font-size:10px; color:var(--text3); margin-top:2px;">
-            <span class="langen">Low = smooth & slow · High = fast & snappy</span>
-            <span langzh>低 = 流畅柔和 · 高 = 快速灵敏</span>
-          </div>
+      <div class="row">
+        <label class="key" for="arrow" data-i18n="ctrlArrow"></label>
+        <div class="slider">
+          <input type="range" id="arrow" min="14" max="48" step="1" value="26">
+          <span class="value" id="v-arrow">26px</span>
         </div>
       </div>
 
-      <div class="divider"></div>
-
-      <!-- Options -->
-      <div class="sidebar-section">
-        <div class="section-title langen">Options</div>
-        <div class="section-title" langzh>选项</div>
-
-        <div class="toggle-row">
-          <span class="toggle-label langen">Hide default cursor</span>
-          <span class="toggle-label" langzh>隐藏默认光标</span>
-          <label class="toggle">
-            <input type="checkbox" id="hideDefault" checked>
-            <div class="toggle-track"><div class="toggle-thumb"></div></div>
-          </label>
-        </div>
-
-        <div class="toggle-row">
-          <span class="toggle-label langen">Enable ring</span>
-          <span class="toggle-label" langzh>启用圆圈</span>
-          <label class="toggle">
-            <input type="checkbox" id="enableCircle" checked>
-            <div class="toggle-track"><div class="toggle-thumb"></div></div>
-          </label>
-        </div>
-
-        <div class="toggle-row">
-          <span class="toggle-label langen">Active</span>
-          <span class="toggle-label" langzh>激活</span>
-          <label class="toggle">
-            <input type="checkbox" id="active-toggle" checked>
-            <div class="toggle-track"><div class="toggle-thumb"></div></div>
-          </label>
+      <div class="row">
+        <label class="key" for="ring" data-i18n="ctrlRing"></label>
+        <div class="slider">
+          <input type="range" id="ring" min="12" max="56" step="1" value="22">
+          <span class="value" id="v-ring">22px</span>
         </div>
       </div>
 
-      <div class="divider"></div>
-
-      <!-- Force state -->
-      <div class="sidebar-section">
-        <div class="section-title langen">Force State</div>
-        <div class="section-title" langzh>强制状态</div>
-        <div class="state-btns">
-          <button class="state-btn active" data-state="default">Default</button>
-          <button class="state-btn" data-state="pointer">Pointer</button>
-          <button class="state-btn" data-state="text">Text</button>
-          <button class="state-btn" data-state="circle">Circle</button>
+      <div class="row">
+        <label class="key" for="border" data-i18n="ctrlBorder"></label>
+        <div class="slider">
+          <input type="range" id="border" min="0.5" max="4" step="0.5" value="1.5">
+          <span class="value" id="v-border">1.5px</span>
         </div>
       </div>
 
-      <!-- Footer hints -->
-      <div class="sidebar-footer">
-        <div class="sidebar-footer-label langen">Try it</div>
-        <div class="sidebar-footer-label" langzh>试试看</div>
-        <div class="hover-hint">
-          <span class="langen">Move your cursor to see states change on links, buttons, and inputs below →</span>
-          <span langzh>移动鼠标，查看下方链接、按钮、输入框的状态变化 →</span>
+      <div class="row">
+        <span class="key" data-i18n="ctrlOptions"></span>
+        <div class="checks">
+          <label class="check"><input type="checkbox" id="hide-default" checked><span data-i18n="optHideDefault"></span></label>
+          <label class="check"><input type="checkbox" id="shadow" checked><span data-i18n="optShadow"></span></label>
+          <label class="check"><input type="checkbox" id="ring-on" checked><span data-i18n="optRing"></span></label>
+          <label class="check"><input type="checkbox" id="click-effect" checked><span data-i18n="optClick"></span></label>
+          <label class="check"><input type="checkbox" id="active" checked><span data-i18n="optEnabled"></span></label>
         </div>
       </div>
+    </div>
+  </section>
 
-    </aside>
+  <!-- ── Usage ──────────────────────────────────────────────────────────── -->
+  <section class="panel">
+    <div class="aside">
+      <h2 data-i18n="usageTitle"></h2>
+      <p data-i18n="usageBody"></p>
+    </div>
 
-    <!-- ── Main ─────────────────────────────────────── -->
-    <main class="main">
-
-      <!-- Hero -->
-      <div class="hero">
-        <div class="hero-badge">
-          <svg width="8" height="8" viewBox="0 0 8 8"><circle cx="4" cy="4" r="3" fill="#6366f1"/></svg>
-          <span class="langen">Framework-agnostic custom cursor</span>
-          <span langzh>跨框架自定义光标系统</span>
-        </div>
-        <h1>
-          <span class="langen">Custom cursor for<br>any JS stack</span>
-          <span langzh>任意 JS 框架的<br>自定义光标组件</span>
-        </h1>
-        <p class="hero-desc">
-          <span class="langen">A tiny, dependency-free cursor system for Electron, Tauri, React, Vue, and any other JS+CSS stack. Smooth dot + ring animation with auto state detection.</span>
-          <span langzh>一个轻量、无依赖的光标系统，适用于 Electron、Tauri、React、Vue 等任何 JS+CSS 技术栈。带平滑跟随动画和自动状态检测。</span>
-        </p>
+    <div>
+      <div class="tabs" role="tablist">
+        <button class="tab" role="tab" aria-selected="true" data-tab="vanilla" type="button" data-i18n="tabVanilla"></button>
+        <button class="tab" role="tab" aria-selected="false" data-tab="browser" type="button" data-i18n="tabBrowser"></button>
+        <button class="tab" role="tab" aria-selected="false" data-tab="react" type="button">React</button>
+        <button class="tab" role="tab" aria-selected="false" data-tab="vue" type="button">Vue</button>
+        <button class="tab" role="tab" aria-selected="false" data-tab="solid" type="button">Solid</button>
       </div>
 
-      <!-- Effect demos -->
-      <div class="section">
-        <div class="section-title">
-          <span class="langen">Cursor States</span>
-          <span langzh>光标状态</span>
-        </div>
-        <div class="effect-grid">
+      <div class="code">
+<pre data-panel="vanilla">import { MonoCursor } from 'mono-cursor'
 
-          <div class="effect-card">
-            <div class="effect-card-title langen">Default</div>
-            <div class="effect-card-title" langzh>默认状态</div>
-            <div class="effect-card-desc langen">Plain elements, empty space</div>
-            <div class="effect-card-desc" langzh>普通元素、空区域</div>
-            <div class="effect-preview">
-              <div style="height:1px; background:var(--border);"></div>
-            </div>
-          </div>
+// once, at startup
+MonoCursor.init({ color: '#6366f1', ringSize: 22 })
 
-          <div class="effect-card">
-            <div class="effect-card-title langen">Pointer</div>
-            <div class="effect-card-desc langen">Links, buttons, interactive elements</div>
-            <div class="effect-card-desc" langzh>链接、按钮、可交互元素</div>
-            <div class="effect-preview">
-              <a href="#" onclick="return false;" class="ex-link langen">hover me →</a>
-              <a href="#" onclick="return false;" class="ex-link" langzh>悬停查看 →</a>
-              <button class="ex-btn langen">Button</button>
-              <button class="ex-btn" langzh>按钮</button>
-            </div>
-          </div>
+// from anywhere — no ref needed
+MonoCursor.setColor('#f59e0b')
+MonoCursor.setRingSize(28)
+MonoCursor.setShadow(false)
+MonoCursor.disable()        // hand the pointer back
+MonoCursor.enable()
+MonoCursor.destroy()        // remove the layer</pre>
 
-          <div class="effect-card">
-            <div class="effect-card-title langen">Text</div>
-            <div class="effect-card-desc langen">Input, textarea, contenteditable</div>
-            <div class="effect-card-desc" langzh>输入框、文本域、可编辑元素</div>
-            <div class="effect-preview">
-              <input class="ex-input langen" placeholder="Type here..." value="">
-              <input class="ex-input" langzh placeholder="在此输入..." value="">
-              <textarea class="ex-input" rows="1" langen placeholder="Textarea..."></textarea>
-              <textarea class="ex-input" rows="1" langzh placeholder="文本域..."></textarea>
-            </div>
-          </div>
+<pre data-panel="browser" hidden>&lt;script src="https://unpkg.com/mono-cursor/dist/index.global.js"&gt;&lt;/script&gt;
+&lt;script&gt;
+  MonoCursor.init({ color: '#6366f1' })
+&lt;/script&gt;</pre>
 
-          <div class="effect-card">
-            <div class="effect-card-title langen">Circle</div>
-            <div class="effect-card-desc langen">data-cursor="circle" attribute</div>
-            <div class="effect-card-desc" langzh>使用 data-cursor="circle" 属性</div>
-            <div class="effect-preview">
-              <div data-cursor="circle" class="ex-btn langen" style="border-color:var(--accent); color:var(--accent);">Custom area</div>
-              <div data-cursor="circle" class="ex-btn" langzh style="border-color:var(--accent); color:var(--accent);">自定义区域</div>
-            </div>
-          </div>
+<pre data-panel="react" hidden>import { MonoCursorProvider } from 'mono-cursor/react'
 
-        </div>
-      </div>
-
-      <!-- API -->
-      <div class="section">
-        <div class="section-title">
-          <span class="langen">Quick Start — 3 lines</span>
-          <span langzh>快速开始 — 3 行代码</span>
-        </div>
-
-        <div class="code-block">
-          <div class="code-header">
-            <span class="code-title langen">Vanilla JS</span>
-            <span class="code-title" langzh>原生 JavaScript</span>
-            <span class="code-lang">js</span>
-          </div>
-          <div class="code-body">
-<pre><span class="k">import</span> { MonoCursor } <span class="k">from</span> <span class="s">'mono-cursor'</span>
-
-<span class="c">// Init once at startup</span>
-MonoCursor.<span class="f">init</span>({ color: <span class="s">'#6366f1'</span> })
-
-<span class="c">// Update anywhere — no ref needed</span>
-MonoCursor.<span class="f">setColor</span>(<span class="s">'#f59e0b'</span>)
-MonoCursor.<span class="f">disable</span>()      <span class="c">// pause</span>
-MonoCursor.<span class="f">enable</span>()       <span class="c">// resume</span>
-MonoCursor.<span class="f">destroy</span>()     <span class="c">// cleanup</span></pre>
-          </div>
-        </div>
-
-        <div class="code-block">
-          <div class="code-header">
-            <span class="code-title langen">Script Tag (no build)</span>
-            <span class="code-title" langzh>直接引入（无需构建）</span>
-            <span class="code-lang">html</span>
-          </div>
-          <div class="code-body">
-<pre><span class="k">&lt;script</span> <span class="t">src</span>=<span class="s">"mono-cursor/dist/index.iife.js"</span><span class="k">&gt;&lt;/script&gt;</span>
-<span class="k">&lt;script&gt;</span>
-  MonoCursor.<span class="f">init</span>({ color: <span class="s">'#6366f1'</span> })
-  MonoCursor.<span class="f">setColor</span>(<span class="s">'#f59e0b'</span>)
-<span class="k">&lt;/script&gt;</span></pre>
-          </div>
-        </div>
-
-        <div class="code-block">
-          <div class="code-header">
-            <span class="code-title langen">React</span>
-            <span class="code-lang">tsx</span>
-          </div>
-          <div class="code-body">
-<pre><span class="k">import</span> { MonoCursorProvider } <span class="k">from</span> <span class="s">'mono-cursor/react'</span>
-
-<span class="k">function</span> <span class="f">App</span>() {
-  <span class="k">return</span> (
-    &lt;MonoCursorProvider color=<span class="s">"#6366f1"</span> ringSize={<span class="n">50</span>}&gt;
-      &lt;YourApp /&gt;
+export function App() {
+  return (
+    &lt;MonoCursorProvider color="#6366f1" ringSize={22}&gt;
+      &lt;Page /&gt;
     &lt;/MonoCursorProvider&gt;
   )
-}</pre>
-          </div>
-        </div>
+}
 
-        <div class="code-block">
-          <div class="code-header">
-            <span class="code-title langen">Data Attributes</span>
-            <span class="code-title" langzh>HTML 数据属性</span>
-            <span class="code-lang">html</span>
-          </div>
-          <div class="code-body">
-<pre><span class="k">&lt;a</span> <span class="t">data-cursor</span>=<span class="s">"pointer"</span>&gt;</span>Link<span class="k">&lt;/a&gt;</span>
-<span class="k">&lt;div</span> <span class="t">data-cursor</span>=<span class="s">"circle"</span>&gt;</span>Custom area<span class="k">&lt;/div&gt;</span>
-<span class="k">&lt;div</span> <span class="t">data-cursor</span>=<span class="s">"text"</span>&gt;</span>Text mode<span class="k">&lt;/div&gt;</span></pre>
-          </div>
-        </div>
+// anywhere else in the tree
+MonoCursor.setColor('#f59e0b')</pre>
 
-        <div class="code-block">
-          <div class="code-header">
-            <span class="code-title langen">All Static API Methods</span>
-            <span class="code-title" langzh>所有静态 API 方法</span>
-            <span class="code-lang">js</span>
-          </div>
-          <div class="code-body">
-<pre>MonoCursor.<span class="f">init</span>(options)            <span class="c">// Initialize (call once)</span>
-MonoCursor.<span class="f">configure</span>(options)     <span class="c">// Update all options</span>
-MonoCursor.<span class="f">enable</span>()              <span class="c">// Resume cursor</span>
-MonoCursor.<span class="f">disable</span>()             <span class="c">// Pause cursor</span>
-MonoCursor.<span class="f">destroy</span>()             <span class="c">// Remove cursor</span>
+<pre data-panel="vue" hidden>&lt;script setup&gt;
+import { useMonoCursor } from 'mono-cursor/vue'
 
-<span class="c">// Setters</span>
-MonoCursor.<span class="f">setColor</span>(<span class="s">'#f00'</span>)
-MonoCursor.<span class="f">setDotSize</span>(<span class="n">12</span>)
-MonoCursor.<span class="f">setRingSize</span>(<span class="n">60</span>)
-MonoCursor.<span class="f">setRingBorderWidth</span>(<span class="n">2</span>)
-MonoCursor.<span class="f">setLerpFactor</span>(<span class="n">0.08</span>)
-MonoCursor.<span class="f">setEnableCircle</span>(<span class="k">false</span>)
-MonoCursor.<span class="f">setHideDefaultCursor</span>(<span class="k">false</span>)
-MonoCursor.<span class="f">setState</span>(<span class="s">'pointer'</span>)</pre>
-          </div>
-        </div>
+const { setColor } = useMonoCursor({ color: '#6366f1' })
+&lt;/script&gt;</pre>
 
+<pre data-panel="solid" hidden>import { useMonoCursor } from 'mono-cursor/solid'
+
+const { setColor } = useMonoCursor({ color: '#6366f1' })</pre>
       </div>
-    </main>
-  </div>
+    </div>
+  </section>
 
-  <!-- MonoCursor library (IIFE global build) -->
-  <script src="mono-cursor.global.js"></script>
-  <script>
-    // Init singleton — global singleton API
-    MonoCursor.init({
-      color: '#6366f1',
-      dotSize: 8,
-      ringSize: 40,
-      ringBorderWidth: 1.5,
-      lerpFactor: 0.15,
-      hideDefaultCursor: true,
-      enableCircle: true,
-    })
+  <!-- ── API ────────────────────────────────────────────────────────────── -->
+  <section class="panel">
+    <div class="aside">
+      <h2 data-i18n="apiTitle"></h2>
+      <p data-i18n="apiBody"></p>
+    </div>
 
-    // ── Language toggle ──────────────────────────────────
-    const $ = id => document.getElementById(id)
-    const html = document.documentElement
+    <div>
+      <ul class="api" id="api"></ul>
+      <p class="note" data-i18n-html="apiNote"></p>
+    </div>
+  </section>
 
-    $('lang-en').addEventListener('click', () => {
-      html.classList.remove('zh')
-      $('lang-en').classList.add('active')
-      $('lang-zh').classList.remove('active')
-    })
+  <footer class="footer">
+    <span>MIT · v1.0.0</span>
+    <a class="author-link" href="https://www.monokelvin.cn" target="_blank" rel="noreferrer noopener">by MonoKelvin</a>
+  </footer>
+</div>
 
-    $('lang-zh').addEventListener('click', () => {
-      html.classList.add('zh')
-      $('lang-zh').classList.add('active')
-      $('lang-en').classList.remove('active')
-    })
-
-    // ── Preset colors ───────────────────────────────────
-    const presets = [
-      '#6366f1', '#8b5cf6', '#ec4899', '#ef4444',
-      '#f59e0b', '#10b981', '#06b6d4', '#3b82f6',
-      '#84cc16', '#f97316', '#0ea5e9', '#a855f7',
-    ]
-    const presetsEl = $('presets')
-    presets.forEach(c => {
-      const btn = document.createElement('button')
-      btn.className = 'preset'
-      btn.style.background = c
-      btn.title = c
-      btn.addEventListener('click', () => setColor(c))
-      presetsEl.appendChild(btn)
-    })
-
-    // ── Controls ─────────────────────────────────────────
-    function setColor(c) {
-      MonoCursor.setColor(c)
-      $('color-picker').value = c
-      $('color-preview').style.background = c
-      $('v-color').textContent = c
-    }
-
-    $('color-picker').addEventListener('input', e => setColor(e.target.value))
-
-    function bind(id, event, fn) {
-      $(id).addEventListener(event, fn)
-    }
-
-    bind('dotSize', 'input', e => {
-      const v = parseInt(e.target.value)
-      MonoCursor.setDotSize(v)
-      $('v-dotSize').textContent = v
-    })
-
-    bind('ringSize', 'input', e => {
-      const v = parseInt(e.target.value)
-      MonoCursor.setRingSize(v)
-      $('v-ringSize').textContent = v
-    })
-
-    bind('ringBorder', 'input', e => {
-      const v = parseFloat(e.target.value)
-      MonoCursor.setRingBorderWidth(v)
-      $('v-ringBorder').textContent = v
-    })
-
-    bind('lerp', 'input', e => {
-      const v = parseFloat(e.target.value)
-      MonoCursor.setLerpFactor(v)
-      $('v-lerp').textContent = v.toFixed(2)
-    })
-
-    bind('hideDefault', 'change', e => MonoCursor.setHideDefaultCursor(e.target.checked))
-    bind('enableCircle', 'change', e => MonoCursor.setEnableCircle(e.target.checked))
-
-    // Active toggle
-    bind('active-toggle', 'change', e => {
-      e.target.checked ? MonoCursor.enable() : MonoCursor.disable()
-    })
-
-    // State buttons
-    document.querySelectorAll('.state-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        document.querySelectorAll('.state-btn').forEach(b => b.classList.remove('active'))
-        btn.classList.add('active')
-        MonoCursor.setState(btn.dataset.state)
-      })
-    })
-  </script>
+<script src="mono-cursor.global.js"></script>
+<script src="app.js"></script>
 </body>
 </html>

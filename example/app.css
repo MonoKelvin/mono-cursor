@@ -1,0 +1,747 @@
+/* ── Tokens ─────────────────────────────────────────────────────────────
+     The accent IS the cursor colour: the library writes --mc-color on :root
+     and everything that highlights here reads it back. */
+  :root {
+    --bg: #08080a;
+    --sunken: #0a0a0c;
+    --chip: rgba(255, 255, 255, 0.03);
+    --line: rgba(255, 255, 255, 0.08);
+    --line-strong: rgba(255, 255, 255, 0.16);
+    --grid: rgba(255, 255, 255, 0.028);
+    --text: #f1f1f3;
+    --muted: #8a8a95;
+    --faint: #5a5a64;
+    --accent: var(--mc-color, #6366f1);
+    --glow: color-mix(in srgb, var(--accent) 9%, transparent);
+    --sans: ui-sans-serif, system-ui, "Segoe UI Variable Text", "Segoe UI", "PingFang SC", "Microsoft YaHei", Roboto, sans-serif;
+    --mono: ui-monospace, "Cascadia Code", "SF Mono", Menlo, Consolas, monospace;
+    --col: 1040px;
+  }
+
+  :root[data-theme="light"] {
+    --bg: #fbfbfc;
+    --sunken: #f5f5f7;
+    --chip: rgba(9, 9, 13, 0.03);
+    --line: rgba(9, 9, 13, 0.10);
+    --line-strong: rgba(9, 9, 13, 0.22);
+    --grid: rgba(9, 9, 13, 0.035);
+    --text: #101015;
+    --muted: #5c5c68;
+    --faint: #8d8d99;
+    --glow: color-mix(in srgb, var(--accent) 7%, transparent);
+    /* The arrow's outline follows the surface it sits on. */
+    --mc-stroke: #fbfbfc;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+
+  html { background: var(--bg); }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 15px/1.6 var(--sans);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* One soft accent bloom behind the page — texture, not decoration. */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background: radial-gradient(760px 460px at 74% -6%, var(--glow), transparent 68%);
+  }
+
+  ::selection { background: color-mix(in srgb, var(--accent) 45%, transparent); }
+  a { color: inherit; }
+  :focus-visible { outline: 1px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+  button { font: inherit; color: inherit; }
+
+  code, pre { font-family: var(--mono); font-feature-settings: "liga" 0; }
+
+  .page {
+    position: relative;
+    z-index: 1;
+    max-width: var(--col);
+    margin: 0 auto;
+    padding: 36px 32px 80px;
+  }
+
+  /* ── Masthead ──────────────────────────────────────────────────────────── */
+  .masthead {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 84px;
+  }
+
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    font-size: 16px;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+  }
+
+  .brand svg { display: block; width: 17px; height: 17px; }
+  .brand path { fill: var(--accent); stroke: var(--bg); stroke-width: 1.4; stroke-linejoin: round; paint-order: stroke; }
+
+  .brand-sep { color: var(--faint); font-style: italic; margin: 0 -2px; }
+
+  /* Author credit — the underline slides in from the left on hover. */
+  .author-link {
+    position: relative;
+    font-style: italic;
+    color: var(--muted);
+    text-decoration: none;
+    transition: color 0.18s ease;
+  }
+  .author-link::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -2px;
+    height: 1px;
+    background: currentColor;
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .author-link:hover { color: var(--text); }
+  .author-link:hover::after { transform: scaleX(1); }
+
+  .tools { display: flex; align-items: center; gap: 8px; }
+  /* One height for every control in the corner — language, links, theme. */
+  .tools > * { height: 32px; }
+
+  .seg {
+    display: flex;
+    gap: 2px;
+    padding: 2px;
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    background: var(--chip);
+  }
+
+  .seg-btn {
+    display: inline-flex;
+    align-items: center;
+    padding: 0 11px;
+    border: 0;
+    border-radius: 7px;
+    background: none;
+    color: var(--faint);
+    font: 11.5px var(--mono);
+    cursor: pointer;
+    transition: color 0.15s ease, background 0.15s ease;
+  }
+  .seg-btn:hover { color: var(--text); }
+  .seg-btn[aria-pressed="true"] { background: var(--text); color: var(--bg); }
+
+  .icon-btn {
+    display: grid;
+    place-items: center;
+    width: 32px;
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    background: var(--chip);
+    color: var(--muted);
+    text-decoration: none;
+    cursor: pointer;
+    transition: color 0.15s ease, border-color 0.15s ease;
+  }
+  .icon-btn:hover { color: var(--text); border-color: var(--line-strong); }
+  .icon-btn svg { width: 15px; height: 15px; }
+  .icon-btn .icon-sun,
+  .icon-btn .icon-moon { fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; }
+  .icon-btn .icon-github,
+  .icon-btn .icon-npm { fill: currentColor; }
+  /* The button shows the theme you would switch to. */
+  :root[data-theme="dark"] .icon-moon,
+  :root[data-theme="light"] .icon-sun { display: none; }
+
+  /* ── Hero ──────────────────────────────────────────────────────────────── */
+  .hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 320px;
+    align-items: center;
+    gap: 48px;
+  }
+
+  h1 {
+    margin: 0 0 22px;
+    font-size: clamp(36px, 4.6vw, 56px);
+    font-weight: 600;
+    line-height: 1.06;
+    letter-spacing: -0.035em;
+    text-wrap: balance;
+  }
+  :root[data-lang="zh"] h1 { letter-spacing: -0.01em; line-height: 1.18; }
+  :root[data-lang="zh"] .lede { line-height: 1.8; }
+
+  .lede {
+    margin: 0 0 32px;
+    max-width: 58ch;
+    font-size: 16.5px;
+    line-height: 1.65;
+    color: var(--muted);
+  }
+
+  .install {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px 10px 16px;
+    background: var(--chip);
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    font-family: var(--mono);
+    font-size: 13px;
+    cursor: pointer;
+    transition: border-color 0.15s ease;
+  }
+  .install:hover { border-color: color-mix(in srgb, var(--accent) 55%, transparent); }
+  .install .prompt { color: var(--accent); }
+  .install .action {
+    padding-left: 12px;
+    border-left: 1px solid var(--line);
+    color: var(--faint);
+    font-size: 11.5px;
+  }
+  .install.copied .action { color: var(--accent); }
+
+  /* ── Hero graphic ────────────────────────────────────────────────────────
+     One looping story on a single timeline (var --t): the cursor arrives from
+     the lower-right as an arrow, becomes an I-beam and types "mono-cursor"
+     into a field (trailing the last glyph), then slides to the heart button,
+     becomes a ring, clicks (shake), and the hollow heart fills red — before
+     everything resets and the loop begins again. Sized ~2.5× the real
+     controls so the morphs read clearly. */
+  .hero-art {
+    position: relative;
+    aspect-ratio: 1;
+    width: 100%;
+    max-width: 360px;
+    margin-left: auto;
+    --t: 11s;
+    --ease: cubic-bezier(0.4, 0, 0.2, 1);
+    --art: 62px;        /* arrow  */
+    --ring: 54px;       /* ring   */
+    --bar-w: 3px;       /* I-beam */
+    --bar-h: 44px;
+  }
+
+  /* Soft accent bloom, pulled slightly upward. */
+  .hero-art::before {
+    content: "";
+    position: absolute;
+    inset: -8% 0 8% 0;
+    border-radius: 50%;
+    background: radial-gradient(closest-side, color-mix(in srgb, var(--accent) 12%, transparent), transparent 72%);
+  }
+
+  /* Grid — wider than the circle and shifted up, faded at the edges. */
+  .hero-art::after {
+    content: "";
+    position: absolute;
+    inset: -18% -10% 12% -10%;
+    background:
+      linear-gradient(var(--grid) 1px, transparent 1px) 0 0 / 30px 30px,
+      linear-gradient(90deg, var(--grid) 1px, transparent 1px) 0 0 / 30px 30px;
+    -webkit-mask-image: radial-gradient(closest-side, #000 52%, transparent 88%);
+    mask-image: radial-gradient(closest-side, #000 52%, transparent 88%);
+  }
+
+  /* Fixed-size row: [ field ][ heart ]. Centred with margins so the cursor
+     coordinates below are stable regardless of container width. The whole row
+     fades at the loop seam so the text + heart reset invisibly. */
+  .art-ui {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 300px;
+    height: 58px;
+    margin: -29px 0 0 -150px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    opacity: 0;
+    animation: art-ui var(--t) var(--ease) infinite;
+  }
+
+  .art-field {
+    flex: none;
+    width: 230px;
+    height: 58px;
+    display: flex;
+    align-items: center;
+    padding: 0 22px;
+    border: 1px solid var(--line-strong);
+    border-radius: 14px;
+    background: var(--chip);
+    font: 20px/1 var(--mono);
+    color: var(--text);
+    overflow: hidden;
+    animation: art-field var(--t) var(--ease) infinite;
+  }
+  .art-typed {
+    white-space: nowrap;
+    clip-path: inset(0 100% 0 0);
+    animation: art-type var(--t) steps(11) infinite;
+  }
+
+  .art-heart {
+    flex: none;
+    position: relative;
+    width: 58px;
+    height: 58px;
+    display: grid;
+    place-items: center;
+    border: 1px solid var(--line-strong);
+    border-radius: 14px;
+    background: var(--chip);
+    animation: art-heart-press var(--t) var(--ease) infinite;
+  }
+  .heart { grid-area: 1 / 1; width: 26px; height: 26px; }
+  .heart-hollow { fill: none; stroke: var(--muted); stroke-width: 1.8; animation: art-heart-hollow var(--t) var(--ease) infinite; }
+  .heart-solid { fill: #ff4d5e; opacity: 0; animation: art-heart-solid var(--t) var(--ease) infinite; }
+
+  /* The moving origin — rides across the field and over to the heart. Its
+     coordinates are relative to the row's top-left. */
+  .art-cursor {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 0;
+    height: 0;
+    opacity: 0;
+    animation: art-path var(--t) var(--ease) infinite;
+  }
+
+  /* Arrow — tip pinned to the origin via margins, so scale shakes around it. */
+  .art-arrow {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: var(--art);
+    height: var(--art);
+    margin: calc(var(--art) * -3.2 / 24) 0 0 calc(var(--art) * -5.5 / 24);
+    transform-origin: calc(var(--art) * 5.5 / 24) calc(var(--art) * 3.2 / 24);
+    filter: drop-shadow(0 4px 10px rgba(15, 23, 42, 0.42));
+    animation: art-arrow var(--t) var(--ease) infinite;
+  }
+  .art-arrow path {
+    fill: var(--accent);
+    stroke: var(--mc-stroke, var(--bg));
+    stroke-width: 2.4;
+    stroke-linejoin: round;
+    paint-order: stroke;
+  }
+
+  /* Ring and I-beam — centred on the origin. */
+  .art-ring {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: var(--ring);
+    height: var(--ring);
+    margin: calc(var(--ring) / -2) 0 0 calc(var(--ring) / -2);
+    border: 2px solid var(--accent);
+    border-radius: 50%;
+    background: color-mix(in srgb, var(--accent) 12%, transparent);
+    opacity: 0;
+    animation: art-ring var(--t) var(--ease) infinite;
+  }
+  .art-bar {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: var(--bar-w);
+    height: var(--bar-h);
+    margin: calc(var(--bar-h) / -2) 0 0 calc(var(--bar-w) / -2);
+    border-radius: 2px;
+    background: var(--accent);
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.35);
+    opacity: 0;
+    animation: art-bar var(--t) var(--ease) infinite;
+  }
+
+  /* Row fades in behind the entering cursor, out at the seam. */
+  @keyframes art-ui {
+    0%       { opacity: 0 }
+    6%, 94%  { opacity: 1 }
+    99%, 100% { opacity: 0 }
+  }
+
+  /* Enter lower-right → field text start → trail the typed glyph → heart. */
+  @keyframes art-path {
+    0%, 4%    { opacity: 0; translate: 322px 108px }
+    10%       { opacity: 1 }
+    16%, 20%  { opacity: 1; translate: 22px 29px }
+    52%       { opacity: 1; translate: 154px 29px }
+    60%, 92%  { opacity: 1; translate: 271px 29px }
+    97%, 100% { opacity: 0; translate: 271px 29px }
+  }
+
+  /* Arrow: only while gliding in, then dissolves into the I-beam. */
+  @keyframes art-arrow {
+    0%, 14%   { opacity: 1; scale: 1 }
+    19%, 100% { opacity: 0; scale: 0.92 }
+  }
+
+  /* I-beam: from the field entry through typing, until it reaches the heart. */
+  @keyframes art-bar {
+    0%, 15%   { opacity: 0 }
+    19%       { opacity: 1 }
+    54%       { opacity: 1 }
+    59%, 100% { opacity: 0 }
+  }
+
+  /* Ring: blooms at the heart, takes the click shake, then fades at the seam. */
+  @keyframes art-ring {
+    0%, 55%   { opacity: 0; scale: 0.55 }
+    60%       { opacity: 1; scale: 1 }
+    63%       { scale: 0.82 }
+    66%       { scale: 1.06 }
+    69%       { scale: 1 }
+    92%       { opacity: 1; scale: 1 }
+    97%, 100% { opacity: 0; scale: 0.7 }
+  }
+
+  /* Field: accent border while the I-beam is inside it. */
+  @keyframes art-field {
+    0%, 14%   { border-color: var(--line-strong) }
+    20%, 52%  { border-color: var(--accent) }
+    58%, 100% { border-color: var(--line-strong) }
+  }
+
+  /* "mono-cursor" reveals glyph-by-glyph in step with the trailing I-beam. */
+  @keyframes art-type {
+    0%, 20%  { clip-path: inset(0 100% 0 0) }
+    52%      { clip-path: inset(0 0 0 0) }
+    100%     { clip-path: inset(0 0 0 0) }
+  }
+
+  /* Heart: hollow until the click, then the solid red one pops in. */
+  @keyframes art-heart-press {
+    0%, 61%   { scale: 1 }
+    64%       { scale: 0.9 }
+    69%, 100% { scale: 1 }
+  }
+  @keyframes art-heart-hollow {
+    0%, 67%   { opacity: 1 }
+    72%, 95%  { opacity: 0 }
+    99%, 100% { opacity: 1 }
+  }
+  @keyframes art-heart-solid {
+    0%, 67%   { opacity: 0; scale: 0.5 }
+    73%       { opacity: 1; scale: 1.22 }
+    78%, 95%  { opacity: 1; scale: 1 }
+    99%, 100% { opacity: 0; scale: 0.5 }
+  }
+
+  /* ── Stage ─────────────────────────────────────────────────────────────── */
+  .stage {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    margin-top: 76px;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    background:
+      linear-gradient(var(--grid) 1px, transparent 1px) 0 0 / 30px 30px,
+      linear-gradient(90deg, var(--grid) 1px, transparent 1px) 0 0 / 30px 30px,
+      var(--sunken);
+    overflow: hidden;
+  }
+
+  .zone {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    min-height: 264px;
+    padding: 22px 24px 26px;
+  }
+  .zone + .zone { border-left: 1px solid var(--line); }
+
+  .zone-label {
+    margin: 0;
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .zone-hint { margin: 0; font-size: 13.5px; color: var(--muted); }
+
+  .zone-prose { margin: auto 0; font-size: 14.5px; line-height: 1.7; color: var(--muted); }
+  :root[data-lang="zh"] .zone-prose { line-height: 1.85; }
+
+  .zone-demo { display: flex; flex-direction: column; align-items: flex-start; gap: 16px; margin-top: auto; width: 100%; }
+
+  .demo-link {
+    color: var(--accent);
+    font-size: 14.5px;
+    text-decoration: none;
+    border-bottom: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+    padding-bottom: 1px;
+  }
+  .demo-link:hover { border-bottom-color: var(--accent); }
+
+  .demo-btn {
+    padding: 8px 15px;
+    background: var(--text);
+    border: 1px solid transparent;
+    border-radius: 7px;
+    color: var(--bg);
+    font-size: 13.5px;
+    cursor: pointer;
+    transition: opacity 0.15s ease;
+  }
+  .demo-btn:hover { opacity: 0.85; }
+
+  .demo-input {
+    width: 100%;
+    padding: 7px 0;
+    background: none;
+    border: 0;
+    border-bottom: 1px solid var(--line-strong);
+    color: var(--text);
+    font-size: 14.5px;
+    outline: none;
+    transition: border-color 0.15s ease;
+  }
+  .demo-input::placeholder { color: var(--faint); }
+  .demo-input:focus { border-bottom-color: var(--accent); }
+
+  /* ── Panels ────────────────────────────────────────────────────────────── */
+  .panel {
+    display: grid;
+    grid-template-columns: 240px minmax(0, 1fr);
+    gap: 40px 56px;
+    padding: 44px 0;
+    margin-top: 72px;
+    border-top: 1px solid var(--line);
+  }
+
+  .panel h2 { margin: 0 0 10px; font-size: 17px; font-weight: 600; letter-spacing: -0.01em; }
+  .panel p { margin: 0; font-size: 14px; line-height: 1.7; color: var(--muted); }
+
+  /* ── Controls ──────────────────────────────────────────────────────────── */
+  .rows { display: flex; flex-direction: column; }
+
+  .row {
+    display: grid;
+    grid-template-columns: 116px minmax(0, 1fr);
+    align-items: center;
+    gap: 20px;
+    padding: 12px 0;
+  }
+  .row + .row { border-top: 1px solid var(--line); }
+  .row > .key { font-size: 13.5px; color: var(--muted); }
+
+  .value {
+    min-width: 5ch;
+    font-family: var(--mono);
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+    color: var(--faint);
+    text-align: right;
+  }
+
+  .slider { display: flex; align-items: center; gap: 14px; }
+  .slider input { flex: 1; min-width: 0; }
+
+  input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    height: 18px;
+    background: none;
+    cursor: pointer;
+  }
+  input[type="range"]::-webkit-slider-runnable-track { height: 2px; background: var(--line-strong); border-radius: 1px; }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 11px; height: 11px; margin-top: -4.5px;
+    border: 0; border-radius: 50%;
+    background: var(--accent);
+  }
+  input[type="range"]::-moz-range-track { height: 2px; background: var(--line-strong); border-radius: 1px; }
+  input[type="range"]::-moz-range-thumb { width: 11px; height: 11px; border: 0; border-radius: 50%; background: var(--accent); }
+
+  .colour { display: flex; align-items: center; gap: 14px; }
+
+  .swatch-input {
+    width: 30px; height: 30px; padding: 0;
+    border: 1px solid var(--line-strong);
+    border-radius: 8px;
+    background: none;
+    cursor: pointer;
+  }
+  .swatch-input::-webkit-color-swatch-wrapper { padding: 3px; }
+  .swatch-input::-webkit-color-swatch { border: 0; border-radius: 5px; }
+  .swatch-input::-moz-color-swatch { border: 0; border-radius: 5px; }
+
+  .presets { display: flex; gap: 8px; }
+
+  .preset {
+    width: 18px; height: 18px; padding: 0;
+    border: 1px solid transparent;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: transform 0.12s ease, box-shadow 0.12s ease;
+  }
+  .preset:hover { transform: scale(1.15); }
+  .preset[aria-pressed="true"] { box-shadow: 0 0 0 1.5px var(--bg), 0 0 0 3px currentColor; }
+
+  .checks { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 20px; }
+
+  .check {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13.5px;
+    color: var(--muted);
+    cursor: pointer;
+  }
+  .check input { width: 14px; height: 14px; accent-color: var(--accent); cursor: pointer; }
+
+  /* ── Code ──────────────────────────────────────────────────────────────── */
+  .tabs { display: flex; gap: 22px; margin-bottom: 14px; }
+
+  .tab {
+    padding: 0 0 6px;
+    background: none;
+    border: 0;
+    border-bottom: 1px solid transparent;
+    color: var(--faint);
+    font: 12.5px var(--mono);
+    cursor: pointer;
+    transition: color 0.15s ease, border-color 0.15s ease;
+  }
+  .tab:hover { color: var(--text); }
+  .tab[aria-selected="true"] { color: var(--text); border-bottom-color: var(--accent); }
+
+  .code {
+    border: 1px solid var(--line);
+    border-radius: 11px;
+    background: var(--sunken);
+    overflow: hidden;
+  }
+
+  pre {
+    margin: 0;
+    padding: 18px 20px 20px;
+    overflow-x: auto;
+    font-size: 12.5px;
+    line-height: 1.75;
+    color: var(--text);
+    opacity: 0.86;
+    tab-size: 2;
+  }
+
+  .t-str { color: #16a34a; }
+  .t-com { color: var(--faint); font-style: italic; }
+  .t-key { color: #9333ea; }
+  .t-num { color: #c2410c; }
+  .t-fn  { color: #2563eb; }
+  .t-tag { color: #9333ea; }
+
+  :root[data-theme="dark"] .t-str { color: #8fd3a8; }
+  :root[data-theme="dark"] .t-key,
+  :root[data-theme="dark"] .t-tag { color: #b79cff; }
+  :root[data-theme="dark"] .t-num { color: #e0917a; }
+  :root[data-theme="dark"] .t-fn  { color: #7fb4ff; }
+
+  /* ── API list ──────────────────────────────────────────────────────────── */
+  .api { margin: 0; padding: 0; list-style: none; }
+
+  .api li {
+    display: grid;
+    grid-template-columns: 210px minmax(0, 1fr);
+    gap: 16px;
+    align-items: baseline;
+    padding: 11px 0;
+    font-size: 13.5px;
+    color: var(--muted);
+  }
+  .api li + li { border-top: 1px solid var(--line); }
+  .api code { font-size: 12.5px; color: var(--text); }
+
+  .note {
+    margin: 20px 0 0;
+    padding-top: 18px;
+    border-top: 1px solid var(--line);
+    font-size: 13px;
+    line-height: 1.75;
+    color: var(--muted);
+  }
+  .note code {
+    padding: 1.5px 6px;
+    border: 1px solid var(--line);
+    border-radius: 5px;
+    font-size: 12px;
+    color: var(--text);
+  }
+
+  /* ── Footer ────────────────────────────────────────────────────────────── */
+  .footer {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: 80px;
+    padding-top: 26px;
+    border-top: 1px solid var(--line);
+    font-family: var(--mono);
+    font-size: 11.5px;
+    color: var(--faint);
+  }
+
+  /* ── Missing bundle notice ─────────────────────────────────────────────── */
+  .warn {
+    display: none;
+    margin: -52px 0 48px;
+    padding: 12px 15px;
+    border: 1px solid rgba(245, 158, 11, 0.35);
+    border-radius: 9px;
+    background: rgba(245, 158, 11, 0.07);
+    color: #f0c07a;
+    font-family: var(--mono);
+    font-size: 12.5px;
+  }
+  .no-bundle .warn { display: block; }
+
+  /* ── Responsive ────────────────────────────────────────────────────────── */
+  @media (max-width: 960px) {
+    .page { padding: 28px 20px 64px; }
+    .masthead { margin-bottom: 52px; }
+    .hero { grid-template-columns: 1fr; gap: 8px; }
+    .hero-art { width: 240px; margin: 0 auto; }
+    .stage { grid-template-columns: 1fr; margin-top: 48px; }
+    .zone { min-height: 0; }
+    .zone + .zone { border-left: 0; border-top: 1px solid var(--line); }
+    .zone-prose { margin: 4px 0 0; }
+    .panel { grid-template-columns: 1fr; gap: 22px; margin-top: 48px; padding: 34px 0; }
+    .row { grid-template-columns: 96px minmax(0, 1fr); gap: 14px; }
+    .api li { grid-template-columns: 1fr; gap: 4px; }
+    .tabs { gap: 16px; overflow-x: auto; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; animation: none !important; }
+
+    /* With the timeline frozen, show a single legible still of the scene. */
+    .art-cursor { opacity: 1; translate: 2px -2px; }
+    .art-arrow { opacity: 1; }
+    .art-ring, .art-bar { opacity: 0; }
+    .art-button { opacity: 1; translate: 0 0; scale: 1; }
+    .art-field { opacity: 0; }
+  }

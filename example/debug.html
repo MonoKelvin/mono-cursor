@@ -1,26 +1,129 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>MonoCursor Debug Test</title>
+<meta charset="utf-8">
+<title>mono-cursor — diagnostics</title>
+<style>
+  body { margin: 0; padding: 32px; background: #0b0b0d; color: #d8d8dd;
+         font: 14px/1.6 ui-monospace, Menlo, Consolas, monospace; }
+  h1 { margin: 0 0 4px; font-size: 16px; font-weight: 600; }
+  p.sub { margin: 0 0 24px; color: #7c7c88; }
+  ul { list-style: none; margin: 0 0 28px; padding: 0; }
+  li { display: flex; gap: 10px; padding: 5px 0; border-bottom: 1px solid #1c1c22; }
+  li b { min-width: 190px; font-weight: 400; color: #7c7c88; }
+  .pass { color: #4ade80; }
+  .fail { color: #f87171; }
+  .warn { color: #fbbf24; }
+  .demo { display: flex; align-items: center; gap: 20px; padding-top: 8px; }
+  .demo a { color: #8b93ff; }
+  .demo input { background: #16161b; border: 1px solid #26262e; border-radius: 5px;
+                padding: 6px 9px; color: inherit; font: inherit; outline: none; }
+</style>
 </head>
 <body>
-  <h1>MonoCursor Debug</h1>
-  <p>Move your mouse. If the cursor appears, it works.</p>
-  <a href="#" onclick="return false;">This is a link</a>
-  <button onclick="console.log('clicked')">A button</button>
-  <input type="text" placeholder="Type here...">
-  <div data-cursor="circle">Circle area</div>
+  <h1>mono-cursor diagnostics</h1>
+  <p class="sub">Move the pointer anywhere on this page, then read the results below.</p>
 
-  <script src="mono-cursor.global.js"></script>
-  <script>
-    console.log('MonoCursor loaded:', typeof MonoCursor);
-    if (MonoCursor) {
-      MonoCursor.init({ color: '#6366f1' });
-      console.log('Init called, instance:', MonoCursor.getInstance() !== null);
-      console.log('Container exists:', !!document.querySelector('.mc-container'));
-      console.log('Styles injected:', !!document.getElementById('mono-cursor-styles'));
-    }
-  </script>
+  <ul id="report"></ul>
+
+  <div class="demo">
+    <a href="#">a link</a>
+    <button type="button">a button</button>
+    <input type="text" placeholder="an input">
+    <span data-cursor="circle">data-cursor="circle"</span>
+  </div>
+
+<script src="mono-cursor.global.js"></script>
+<script>
+(function () {
+  var report = document.getElementById('report');
+  var rows = {};
+
+  function row(name) {
+    var li = document.createElement('li');
+    var label = document.createElement('b');
+    label.textContent = name;
+    var value = document.createElement('span');
+    value.textContent = '…';
+    li.append(label, value);
+    report.append(li);
+    rows[name] = value;
+    return value;
+  }
+
+  function set(name, state, text) {
+    rows[name].className = state;
+    rows[name].textContent = text;
+  }
+
+  row('bundle');
+  row('native pointer');
+  row('stylesheet');
+  row('layer');
+  row('elements');
+  row('pointer position');
+  row('tracking');
+  row('hover state');
+  row('system cursor hidden');
+  row('escape hatch');
+
+  if (typeof window.MonoCursor === 'undefined') {
+    set('bundle', 'fail', 'missing — run `npm run build` first');
+    return;
+  }
+  set('bundle', 'pass', 'MonoCursor global loaded');
+
+  var fine = window.matchMedia('(pointer: fine)').matches;
+  var calm = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  set('native pointer', fine && !calm ? 'pass' : 'warn',
+      'pointer:fine = ' + fine + ' · reduced-motion = ' + calm);
+
+  window.MonoCursor.init({ color: '#6366f1' });
+
+  set('stylesheet', document.getElementById('mono-cursor-styles') ? 'pass' : 'fail',
+      document.getElementById('mono-cursor-styles') ? 'injected' : 'not injected');
+
+  var layer = document.querySelector('.mc-container');
+  set('layer', layer ? 'pass' : 'fail', layer ? 'mounted' : 'not mounted');
+
+  if (!layer) return;
+
+  var arrow = layer.querySelector('.mc-arrow');
+  var ring = layer.querySelector('.mc-ring');
+  set('elements', arrow && ring ? 'pass' : 'fail',
+      'arrow = ' + !!arrow + ' · ring = ' + !!ring);
+
+  var lastX = null;
+  var lastY = null;
+
+  window.addEventListener('pointermove', function (event) {
+    set('pointer position', 'pass', event.clientX + ', ' + event.clientY);
+    var transform = layer.style.transform || '(none)';
+    var match = /translate3d\((-?[\d.]+)px, (-?[\d.]+)px/.exec(transform);
+    var aligned = match &&
+      Math.abs(parseFloat(match[1]) - event.clientX) < 0.01 &&
+      Math.abs(parseFloat(match[2]) - event.clientY) < 0.01;
+    set('tracking', aligned ? 'pass' : 'fail', transform);
+    lastX = event.clientX;
+    lastY = event.clientY;
+  }, { passive: true });
+
+  window.addEventListener('mouseover', function (event) {
+    var target = event.target;
+    if (!(target instanceof Element)) return;
+    set('hover state', 'pass', layer.dataset.state + '  ←  ' +
+        (target.tagName.toLowerCase() + (target.className ? '.' + target.className : '')));
+  });
+
+  var sync = function () {
+    var hidden = document.documentElement.classList.contains('has-mc-cursor');
+    set('system cursor hidden', hidden ? 'pass' : 'warn',
+        hidden ? 'hidden — the custom cursor is the only one' : 'still visible (move the pointer, or DevTools is open)');
+    set('escape hatch', 'pass', 'MonoCursor.setHideDefaultCursor(false) gives it back');
+  };
+  sync();
+  setInterval(sync, 500);
+})();
+</script>
 </body>
 </html>

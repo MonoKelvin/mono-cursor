@@ -1,67 +1,57 @@
-// Mock rAF — queue callbacks but don't auto-invoke (prevents infinite loops in tests)
-const pendingCallbacks: Map<number, FrameRequestCallback> = new Map()
-let rafCounter = 0
+// ── matchMedia ───────────────────────────────────────────────────────────────
+// jsdom never evaluates media queries (everything is "no match"), so the
+// pointer / reduced-motion guards have to be faked: fine pointer + no
+// reduced-motion unless a test overrides it.
 
-global.requestAnimationFrame = (cb: FrameRequestCallback) => {
-  const id = ++rafCounter
-  pendingCallbacks.set(id, cb)
-  return id
+type MediaMatches = Record<string, boolean>
+
+let mediaMatches: MediaMatches = {}
+
+/** Override media query results for a single test (reset automatically). */
+export function setMediaMatches(next: MediaMatches): void {
+  mediaMatches = next
 }
 
-global.cancelAnimationFrame = (id: number) => {
-  pendingCallbacks.delete(id)
+export function resetMediaMatches(): void {
+  mediaMatches = {}
 }
 
-// Helper: advance one animation frame (call the oldest pending rAF cb)
-export function flushFrame(): void {
-  const entries = [...pendingCallbacks.entries()]
-  pendingCallbacks.clear()
-  for (const [id, cb] of entries) {
-    cb(performance.now())
-  }
+function matchMedia(query: string): MediaQueryList {
+  const matched = query in mediaMatches ? mediaMatches[query] : !query.includes('reduced-motion')
+  return {
+    matches: matched,
+    media: query,
+    onchange: null,
+    addListener: () => {},
+    removeListener: () => {},
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    dispatchEvent: () => false,
+  } as unknown as MediaQueryList
 }
 
-// Flush ALL pending frames (drain the queue)
-export function flushAllFrames(): void {
-  while (pendingCallbacks.size > 0) {
-    flushFrame()
-  }
-}
+Object.defineProperty(window, 'matchMedia', { writable: true, configurable: true, value: matchMedia })
+Object.defineProperty(global, 'matchMedia', { writable: true, configurable: true, value: matchMedia })
 
-// Mock getComputedStyle
-const mockComputedStyle = {
-  getPropertyValue: () => '',
-}
-Object.defineProperty(global, 'getComputedStyle', {
-  value: () => mockComputedStyle,
+// ── getComputedStyle ─────────────────────────────────────────────────────────
+// Only the bits scrollbar detection reads; jsdom's own version would need a
+// full layout pass.
+Object.defineProperty(window, 'getComputedStyle', {
   writable: true,
+  configurable: true,
+  value: () => ({ overflowY: 'visible', overflowX: 'visible' }),
 })
 
-// Ensure PointerEvent exists (not all jsdom versions have it)
-if (typeof (global as any).PointerEvent === 'undefined') {
-  ;(global as any).PointerEvent = class PointerEvent extends MouseEvent {
-    pointerId: number
-    width: number
-    height: number
-    pressure: number
-    tangentialPressure: number
-    tiltX: number
-    tiltY: number
-    twist: number
-    pointerType: string
-    isPrimary: boolean
-    constructor(type: string, init?: any) {
+// ── PointerEvent ─────────────────────────────────────────────────────────────
+if (typeof window.PointerEvent === 'undefined') {
+  class PointerEventPolyfill extends MouseEvent {
+    pointerId = 0
+    pointerType = 'mouse'
+    isPrimary = true
+    constructor(type: string, init?: MouseEventInit) {
       super(type, init)
-      this.pointerId = init?.pointerId ?? 0
-      this.width = init?.width ?? 1
-      this.height = init?.height ?? 1
-      this.pressure = init?.pressure ?? 0
-      this.tangentialPressure = init?.tangentialPressure ?? 0
-      this.tiltX = init?.tiltX ?? 0
-      this.tiltY = init?.tiltY ?? 0
-      this.twist = init?.twist ?? 0
-      this.pointerType = init?.pointerType ?? 'mouse'
-      this.isPrimary = init?.isPrimary ?? true
     }
   }
+  Object.defineProperty(window, 'PointerEvent', { writable: true, value: PointerEventPolyfill })
+  Object.defineProperty(global, 'PointerEvent', { writable: true, value: PointerEventPolyfill })
 }

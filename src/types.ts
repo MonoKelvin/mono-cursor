@@ -1,21 +1,29 @@
-export type CursorState = 'default' | 'pointer' | 'text' | 'circle'
-export type CursorType = CursorState
+/**
+ * Visual state of the cursor.
+ *
+ * - `default` — arrow pointer
+ * - `pointer` — ring, over links / buttons / anything clickable
+ * - `text`    — I-beam, over inputs and editable text
+ */
+export type CursorState = 'default' | 'pointer' | 'text'
 
 export interface MonoCursorOptions {
-  /** Primary cursor color (hex, rgb, etc.) */
+  /** Arrow fill colour (any CSS colour). */
   color?: string
-  /** Center dot diameter in pixels */
-  dotSize?: number
-  /** Outer ring diameter in pixels */
+  /** Arrow size in pixels. */
+  arrowSize?: number
+  /** Ring diameter in pixels (the `pointer` state). */
   ringSize?: number
-  /** Ring border thickness in pixels */
+  /** Ring border thickness in pixels. */
   ringBorderWidth?: number
-  /** Smoothing factor: 0.01 = smooth/slow, 1 = instant */
-  lerpFactor?: number
-  /** Hide the system default cursor */
+  /** Hide the system cursor while the custom cursor is active. */
   hideDefaultCursor?: boolean
-  /** Enable the outer ring element */
+  /** Draw the ring / I-beam. When `false` the arrow stays visible in every state. */
   enableCircle?: boolean
-  /** Z-index of the cursor container */
+  /** Drop shadow under the arrow and ring, so they read on busy backgrounds. */
+  shadow?: boolean
+  /** Scale the cursor down while the pointer is pressed. */
+  clickEffect?: boolean
+  /** Z-index of the cursor layer. */
   zIndex?: number
 }

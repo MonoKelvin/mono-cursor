@@ -8,43 +8,28 @@ export interface MonoCursorReactProps extends MonoCursorOptions {
   children?: React.ReactNode
 }
 
-export function MonoCursorProvider({
-  children,
-  color,
-  dotSize,
-  ringSize,
-  ringBorderWidth,
-  lerpFactor,
-  hideDefaultCursor,
-  enableCircle,
-  zIndex,
-}: MonoCursorReactProps) {
+/** Mounts the global cursor for the lifetime of the component. */
+export function MonoCursorProvider({ children, ...options }: MonoCursorReactProps) {
   const initialized = useRef(false)
 
   useEffect(() => {
     if (initialized.current) return
     initialized.current = true
 
-    MonoCursor.init({
-      color,
-      dotSize,
-      ringSize,
-      ringBorderWidth,
-      lerpFactor,
-      hideDefaultCursor,
-      enableCircle,
-      zIndex,
-    })
+    MonoCursor.init(options)
 
     return () => {
       MonoCursor.destroy()
       initialized.current = false
     }
+    // Options are passed once at mount; use the static setters to change them.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   return <>{children}</>
 }
 
+/** Imperative handle for updating the cursor from anywhere in the tree. */
 export function useMonoCursor(options?: MonoCursorOptions) {
   const ref = useRef<MonoCursor | null>(null)
 
@@ -54,13 +39,18 @@ export function useMonoCursor(options?: MonoCursorOptions) {
       MonoCursor.destroy()
       ref.current = null
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   return {
     setColor: MonoCursor.setColor,
-    setDotSize: MonoCursor.setDotSize,
+    setArrowSize: MonoCursor.setArrowSize,
     setRingSize: MonoCursor.setRingSize,
-    setLerpFactor: MonoCursor.setLerpFactor,
+    setRingBorderWidth: MonoCursor.setRingBorderWidth,
+    setEnableCircle: MonoCursor.setEnableCircle,
+    setShadow: MonoCursor.setShadow,
+    setClickEffect: MonoCursor.setClickEffect,
+    setHideDefaultCursor: MonoCursor.setHideDefaultCursor,
     setState: MonoCursor.setState,
     enable: MonoCursor.enable,
     disable: MonoCursor.disable,
