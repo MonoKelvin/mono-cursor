@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>MonoCursor Debug Test</title>
+</head>
+<body>
+  <h1>MonoCursor Debug</h1>
+  <p>Move your mouse. If the cursor appears, it works.</p>
+  <a href="#" onclick="return false;">This is a link</a>
+  <button onclick="console.log('clicked')">A button</button>
+  <input type="text" placeholder="Type here...">
+  <div data-cursor="circle">Circle area</div>
+
+  <script src="mono-cursor.global.js"></script>
+  <script>
+    console.log('MonoCursor loaded:', typeof MonoCursor);
+    if (MonoCursor) {
+      MonoCursor.init({ color: '#6366f1' });
+      console.log('Init called, instance:', MonoCursor.getInstance() !== null);
+      console.log('Container exists:', !!document.querySelector('.mc-container'));
+      console.log('Styles injected:', !!document.getElementById('mono-cursor-styles'));
+    }
+  </script>
+</body>
+</html>
