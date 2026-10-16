@@ -1,5 +1,7 @@
 # MonoCursor
 
+![screenshot](./example/screenshot.png)
+
 A tiny, framework-agnostic custom cursor for any JS + CSS stack — Electron, Tauri, React, Vue, Solid, Next.js, plain HTML.
 
 An arrow over empty space, a ring over anything clickable, an I-beam over anything you can type in. One transform write per pointer event — no easing queue — so it lands on the same frame as your mouse.

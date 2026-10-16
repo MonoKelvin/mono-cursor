@@ -1,5 +1,7 @@
 # MonoCursor
 
+![截图](./assets/screenshot.png)
+
 一个轻量、跨框架的自定义光标系统，适用于任何 JS+CSS 技术栈 —— Electron、Tauri、React、Vue、Solid、Next.js、纯 HTML。
 
 指向空白处就是箭头，指向可点击的是圆环，指向可输入的是 I 形光标。每次指针事件只写一次 transform，没有缓动队列，所以和鼠标落在同一帧。
